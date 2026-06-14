@@ -1,0 +1,50 @@
+{
+  "name": "expense-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "verify": "tsc --noEmit && eslint",
+    "check:db": "tsx scripts/check-db.mts",
+    "e2e:expenses": "tsx scripts/e2e-expenses.mts",
+    "e2e:dashboard": "tsx scripts/e2e-dashboard.mts",
+    "e2e:subscriptions": "tsx scripts/e2e-subscriptions.mts",
+    "e2e:changelog": "tsx scripts/e2e-changelog.mts",
+    "e2e:settings": "tsx scripts/e2e-settings.mts"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.16",
+    "@radix-ui/react-label": "^2.1.9",
+    "@radix-ui/react-select": "^2.3.0",
+    "@radix-ui/react-slot": "^1.2.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "dexie": "^4.4.3",
+    "dexie-react-hooks": "^4.4.0",
+    "lucide-react": "^1.18.0",
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.6.0",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "fake-indexeddb": "^6.2.5",
+    "playwright": "^1.60.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.4",
+    "typescript": "^5"
+  }
+}

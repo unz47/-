@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/*
+ * Midnight Ledger — ダークが既定のテーマ（PROJECT_PLAN §3）。
+ * パレットは @theme で定義し、CSS 変数（var(--color-...)）と Tailwind ユーティリティの
+ * 双方から参照できるようにする。生のカラーコードはここ以外に直書きしない。
+ */
+@theme {
+  /* 背景・面（base→surface→surface-raised の3層で奥行き） */
+  --color-base: #0b0e14;
+  --color-surface: #151a23;
+  --color-surface-raised: #1e242f;
+  --color-border: #2a313d;
+
+  /* テキスト */
+  --color-text-primary: #e6eaf0;
+  --color-text-secondary: #9ba4b4;
+  --color-text-muted: #5c6678;
+
+  /* 主アクセント（teal） */
+  --color-accent: #2dd4bf;
+  --color-accent-dim: #14b8a6;
+  --color-accent-glow: #5eead4;
+  /* アクセント面の上に載せる文字・アイコン色（最暗の base 相当）。
+     Tailwind の text-base はフォントサイズ用なので、色には専用トークンを使う。 */
+  --color-on-accent: #07120f;
+
+  /* 機能色（シグナル：意味のあるときだけ使う） */
+  --color-success: #34d399; /* 減額・予算内 */
+  --color-danger: #f87171; /* 増額・予算超過 */
+  --color-warning: #fbbf24; /* 予算接近 */
+  --color-info: #60a5fa;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* カテゴリ別グラフのパレット（PROJECT_PLAN §3、定数は src/lib/colors.ts に集約） */
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 金額表示：桁を揃えるための等幅数字 */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
