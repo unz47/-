@@ -45,7 +45,27 @@ export default function SubscriptionsPage() {
     useMemo(() => {
       const all = subs ?? [];
       const active = all.filter((s) => !s.canceledAt);
-      const canceled = all.filter((s) => s.canceledAt);
+
+      // 解約済みの見せ方:
+      // - 現在アクティブなサービスは出さない（再契約済み＝もう解約状態ではない）
+      // - 同名サービスはサービス単位で 1 枚に集約（再契約で増える履歴レコードが積み上がらないように）
+      // データ層では履歴レコードを残す（過去月の集計を保つ。§10）。表示だけ束ねる。
+      const activeNames = new Set(active.map((s) => s.serviceName));
+      const groups = new Map<string, Subscription[]>();
+      for (const s of all) {
+        if (!s.canceledAt || activeNames.has(s.serviceName)) continue;
+        const arr = groups.get(s.serviceName) ?? [];
+        arr.push(s);
+        groups.set(s.serviceName, arr);
+      }
+      const canceled = [...groups.values()].map((group) => {
+        // 最新の解約レコードを代表に（canceledAt 降順）
+        const sorted = [...group].sort((a, b) =>
+          (a.canceledAt ?? "") < (b.canceledAt ?? "") ? 1 : -1,
+        );
+        return { sub: sorted[0], count: group.length };
+      });
+
       const thisMonth = toMonthKey(new Date());
       const monthlyTotal = active.reduce(
         (acc, s) => acc + monthlyEquivalent(s),
@@ -115,12 +135,13 @@ export default function SubscriptionsPage() {
           {canceled.length > 0 && (
             <>
               <p className="px-1 pt-3 text-xs text-text-muted">解約済み</p>
-              {canceled.map((s) => (
+              {canceled.map(({ sub, count }) => (
                 <SubscriptionCard
-                  key={s.id}
-                  sub={s}
+                  key={sub.id}
+                  sub={sub}
                   onOpenActions={openActions}
-                  recentlyRaised={raisedIds.has(s.id)}
+                  recentlyRaised={raisedIds.has(sub.id)}
+                  historyCount={count}
                 />
               ))}
             </>

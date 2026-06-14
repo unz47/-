@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ServiceLogo } from "@/components/subscriptions/service-logo";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -165,9 +166,11 @@ function FlowBody({ onDone }: { onDone: () => void }) {
                 onClick={() => chooseService(p)}
                 className="flex items-center gap-2 rounded-xl border border-border bg-surface-raised px-3 py-3 text-left text-sm font-medium text-text-primary outline-none transition-colors hover:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent/40"
               >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs text-text-secondary">
-                  {p.service.charAt(0)}
-                </span>
+                <ServiceLogo
+                  serviceName={p.service}
+                  presetId={p.id}
+                  className="size-7 bg-surface text-xs"
+                />
                 <span className="truncate">{p.service}</span>
               </button>
             ))}

@@ -29,6 +29,13 @@ interface SubscriptionState {
   ) => Promise<void>;
   /** 解約は論理削除（canceledAt をセット）。レコードは消さない。 */
   cancelSubscription: (id: string, canceledAt: string) => Promise<void>;
+  /**
+   * 解約済みサブスクを再契約する。集計は動的（§4）なので canceledAt を消すと
+   * 空白期間まで遡って計上され、startedAt をずらすと過去の契約期間が消える。
+   * どちらも履歴を壊すため、再契約は **新しい契約レコード** を作る
+   * （startedAt = 再契約日、元の解約レコードは履歴として残す）。新しい契約の id を返す。
+   */
+  reactivateSubscription: (id: string, startedAt: string) => Promise<string>;
 }
 
 export const useSubscriptionStore = create<SubscriptionState>(() => ({
@@ -74,6 +81,27 @@ export const useSubscriptionStore = create<SubscriptionState>(() => ({
 
   cancelSubscription: async (id, canceledAt) => {
     await db.subscriptions.update(id, { canceledAt });
+  },
+
+  reactivateSubscription: async (id, startedAt) => {
+    const prev = await db.subscriptions.get(id);
+    if (!prev) return id;
+    // 元の契約条件を引き継ぎつつ、新規 id・新しい開始日・解約なしで作り直す。
+    const newId = uid();
+    await db.subscriptions.add({
+      id: newId,
+      serviceName: prev.serviceName,
+      planName: prev.planName,
+      amount: prev.amount,
+      billingCycle: prev.billingCycle,
+      categoryId: prev.categoryId,
+      billingDay: prev.billingDay,
+      billingMonth: prev.billingMonth,
+      presetId: prev.presetId,
+      startedAt,
+      createdAt: new Date().toISOString(),
+    });
+    return newId;
   },
 }));
 

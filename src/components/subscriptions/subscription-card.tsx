@@ -7,6 +7,7 @@ import { formatYen } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ServiceLogo } from "@/components/subscriptions/service-logo";
 
 interface SubscriptionCardProps {
   sub: Subscription;
@@ -14,12 +15,15 @@ interface SubscriptionCardProps {
   onOpenActions: (sub: Subscription) => void;
   /** 値上げバッジ（直近改定が増額）。 */
   recentlyRaised?: boolean;
+  /** 解約済み代表カードが束ねる過去契約数（>1 のとき件数を併記）。 */
+  historyCount?: number;
 }
 
 export function SubscriptionCard({
   sub,
   onOpenActions,
   recentlyRaised,
+  historyCount,
 }: SubscriptionCardProps) {
   const canceled = Boolean(sub.canceledAt);
 
@@ -32,10 +36,12 @@ export function SubscriptionCard({
         aria-label={`${sub.serviceName} の操作`}
         className="flex w-full items-center gap-3 p-4 text-left outline-none transition-colors hover:bg-surface-raised/40 focus-visible:bg-surface-raised/40"
       >
-        {/* レターアバター */}
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-raised text-base font-semibold text-text-secondary">
-          {sub.serviceName.charAt(0)}
-        </span>
+        {/* サムネ（ブランドロゴ or 頭文字フォールバック） */}
+        <ServiceLogo
+          serviceName={sub.serviceName}
+          presetId={sub.presetId}
+          className="text-base"
+        />
 
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
@@ -49,7 +55,11 @@ export function SubscriptionCard({
           </span>
           <span className="block truncate text-sm text-text-muted">
             {canceled
-              ? `${sub.planName} ・ 解約 ${sub.canceledAt}`
+              ? `${sub.planName} ・ 解約 ${sub.canceledAt}${
+                  historyCount && historyCount > 1
+                    ? ` ・ 計${historyCount}契約`
+                    : ""
+                }`
               : sub.billingCycle === "yearly"
                 ? `${sub.planName} ・ 毎年${sub.billingMonth ?? ""}月${sub.billingDay}日`
                 : `${sub.planName} ・ 毎月${sub.billingDay}日`}

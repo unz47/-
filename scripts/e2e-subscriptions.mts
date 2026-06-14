@@ -87,6 +87,62 @@ async function main() {
     await page.getByText("≈ ¥492/月").waitFor(); // カードの月額換算
     console.log("✓ 年額プラン登録 → 月額換算で合算（¥1,772 / カードに ≈¥492/月）");
 
+    // 再契約: 解約済み Netflix を ⋯ → 再契約する → 新規契約レコードで再有効化
+    await openActions(page, "Netflix");
+    await page.getByRole("button", { name: "再契約する", exact: true }).click();
+    await page.getByText("3件 契約中").waitFor();
+    // Spotify 1280 + Amazon 492 + Netflix 1590 = 3362（再契約は元の金額を引き継ぐ）
+    await page.getByText("¥3,362").first().waitFor();
+    // 再契約済みのサービスは「解約済み」から外れる（積み上がらない）
+    await page.getByText("解約済み").waitFor({ state: "detached" }).catch(() => {});
+    assert.equal(
+      await page.getByText("解約済み").count(),
+      0,
+      "再契約でアクティブに戻り、解約済みセクションから外れる",
+    );
+    // ただしデータ層には履歴レコードが残る（過去月の集計を保つ）
+    const netflixRecords = await page.evaluate(
+      () =>
+        new Promise<number>((resolve, reject) => {
+          const req = indexedDB.open("expense-tracker");
+          req.onsuccess = () => {
+            const db = req.result;
+            const all = db
+              .transaction("subscriptions", "readonly")
+              .objectStore("subscriptions")
+              .getAll();
+            all.onsuccess = () => {
+              db.close();
+              const rows = all.result as { serviceName: string }[];
+              resolve(rows.filter((s) => s.serviceName === "Netflix").length);
+            };
+            all.onerror = () => reject(all.error);
+          };
+          req.onerror = () => reject(req.error);
+        }),
+    );
+    assert.equal(
+      netflixRecords,
+      2,
+      "解約レコード＋新規契約で Netflix は 2 レコード（履歴保持）",
+    );
+    console.log(
+      "✓ 再契約 → 再有効化（3件 ¥3,362）。解約済みから外れつつ履歴レコードは保持（2件）",
+    );
+
+    // 積み上がり防止: 再契約した Netflix を再度解約 → 同名の解約済みは1枚に集約
+    await openActions(page, "Netflix");
+    await page.getByRole("button", { name: "解約", exact: true }).click();
+    await page.getByRole("button", { name: "解約する", exact: true }).click();
+    await page.getByText("2件 契約中").waitFor(); // Spotify + Amazon
+    await page.getByText("計2契約").waitFor(); // 履歴2件を1枚に束ねた併記
+    assert.equal(
+      await page.getByRole("button", { name: "Netflix の操作" }).count(),
+      1,
+      "同名の解約済みは1枚に集約（解約↔再契約を繰り返しても積み上がらない）",
+    );
+    console.log("✓ 同名の解約済みは1枚に集約（計2契約・積み上がり防止）");
+
     console.log("\n✓ Phase 4 受け入れ条件 全項目パス");
   } finally {
     await browser.close();

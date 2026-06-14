@@ -84,8 +84,19 @@ pnpm build            # 本番ビルド（最終確認）
   - **v0.1.x 改修（2026-06-14）**: サブスクに請求周期を追加（`billingCycle` 'monthly'|'yearly' + `billingMonth?`、db v2 マイグレーション）。
     集計は「月額換算(monthlyEquivalent)」と「当月実請求(actualChargeInMonth)」の2系統（aggregate.ts）。
     ダッシュボード当月総支出・月推移・カテゴリ別は当月実請求基準（年額は請求月にスパイク）、UI に月額換算を併記。PROJECT_PLAN §4/§10 更新済み。
-  - 進行中: サブスクのプリセット拡張（約66サービス、`docs/subscription-research.md`）と
-    ロゴ表示（`simple-icons` バンドル＋頭文字アバター。外部CDN不可）。**未着手**。プリセットを cycle-aware で投入する。
+  - **サブスクのサムネ／ロゴ実装済み（2026-06-14）**: `simple-icons` をバンドルし**単色グリフ**で表示
+    （`text-secondary`、currentColor。色は付けない＝赤シグナル規律を守る）。ブランド未知は頭文字アバターに
+    フォールバック。`src/lib/brands.ts`（presetId/正規化サービス名で解決）＋`components/subscriptions/service-logo.tsx`。
+    サブスクカードと登録ピッカー（`subscription-new-flow.tsx`）で共用。外部CDN送信なし。
+    `brands.ts` の `BRANDS` は **simple-icons 実在ブランドを網羅**（26サービス: Netflix/AppleTV+/DAZN/
+    YouTube(Premium/Music)/Spotify/AppleMusic/LINE/Claude/Gemini/Perplexity/GitHub Copilot/Cursor/
+    Notion/Google One/iCloud/Dropbox/1Password/Evernote/楽天マガジン/Audible/PS Plus/Apple Arcade/
+    EA Play/Google Play）。presetId と正規化サービス名（英日・表記ゆれ別名）の両方で解決、手入力でも当たる。
+    **Amazon系 / Adobe / Nintendo / Xbox / Microsoft / Disney / Hulu / ABEMA / Canva / ChatGPT(OpenAI) /
+    国内動画・新聞等は simple-icons が商標方針で未収録**＝頭文字フォールバック（再配布リスク回避、研究doc準拠）。
+    プリセット拡張時は `BRANDS` に presetId/別名を足すだけ。検証: `pnpm verify`/`pnpm build`/`pnpm e2e:subscriptions` 緑。
+  - 進行中: サブスクのプリセット拡張（約66サービス、`docs/subscription-research.md`）。**未着手**。
+    プリセットを cycle-aware で投入。拡張時は `brands.ts` の presetId→simple-icons マップも併せて増やす。
   - **手入力導線改善（2026-06-14）**: 登録フローのサービス選択画面の先頭に「＋ 手入力で追加」を独立配置。
     プリセット一覧からは custom を除外し手入力ボタンに集約（`subscription-new-flow.tsx`）。実ブラウザ検証済み。
   - **カレンダー実装済み（2026-06-14, v0.1.x）**: `/calendar` を**読み取り専用ビュー**として実装。
@@ -99,6 +110,14 @@ pnpm build            # 本番ビルド（最終確認）
     右の「⋯」から **アクションシート（改定ログ / 編集 / 解約）** を開く（`components/subscriptions/subscription-actions.tsx`、
     Dialog ボトムシート流用）。解約は確認 1 段の論理削除で、**赤は値上げ専用のため destructive でも赤を使わない**。
     `SubscriptionCard` は `onEdit`/`onShowLogs` を `onOpenActions` に集約。e2e:subscriptions / e2e:changelog を新フローに更新。物理削除は未提供（方針未確定）。
+  - **再契約（2026-06-14）**: 解約済みカードの ⋯ に「再契約する」を追加（`reactivateSubscription`）。
+    集計は動的（§4）のため、canceledAt クリアは空白期間を遡って計上・startedAt 変更は過去契約を消す＝どちらも履歴破壊。
+    よって**再契約＝新しい契約レコードを作る**（再契約日を startedAt、元の金額/プラン/周期/課金日/presetId を引き継ぐ、
+    解約レコードは履歴として残す）。価格が変わっていれば新カードの ⋯→編集 で上書き。PROJECT_PLAN §10 に追記。
+    検証: `pnpm e2e:subscriptions`（再契約で 3件・¥3,362・解約履歴保持）緑。
+    **解約済みの積み上がり防止**: 一覧の「解約済み」は現在アクティブなサービスを除外し、同名を1枚に集約
+    （代表＝最新の解約、`計N契約` 併記。`app/subscriptions/page.tsx`）。再契約すると解約済みから外れアクティブへ。
+    データ層は履歴レコードを残す（集計の正しさ維持）＝表示だけ束ねる。e2e に積み上がり防止ケース追加。
 - 確定した環境/規約:
   - Next.js **16**（Turbopack 既定）/ React 19 / Tailwind v4。`next lint` は廃止のため
     **`pnpm verify` = `tsc --noEmit && eslint`**（CLAUDE.md §1 の表記より実体はこちら）。
