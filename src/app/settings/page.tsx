@@ -70,7 +70,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="px-5 pt-14">
+    <div className="px-5 pt-safe">
       <h1 className="mb-5 text-2xl font-bold tracking-tight">設定</h1>
 
       {/* カテゴリ管理 */}

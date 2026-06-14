@@ -118,6 +118,13 @@ pnpm build            # 本番ビルド（最終確認）
     **解約済みの積み上がり防止**: 一覧の「解約済み」は現在アクティブなサービスを除外し、同名を1枚に集約
     （代表＝最新の解約、`計N契約` 併記。`app/subscriptions/page.tsx`）。再契約すると解約済みから外れアクティブへ。
     データ層は履歴レコードを残す（集計の正しさ維持）＝表示だけ束ねる。e2e に積み上がり防止ケース追加。
+  - **iOS ネイティブ化の足場（2026-06-14）**: スマホ配布のため Capacitor で iOS ラップ予定。
+    `next.config.ts` に `output: "export"`（全ルート静的書き出し → `out/`）。静的化の都合で
+    動的ルート `/subscriptions/[id]/logs` を **クエリ式の静的ルート `/subscriptions/logs?id=...`** に変更
+    （`useSearchParams` + Suspense）。`router.push` 側も更新。`pnpm build` で `out/` 生成を確認。
+    Capacitor 導入済み（`@capacitor/{core,ios,cli}` v8、`capacitor.config.ts` webDir:"out"、
+    scripts `ios:sync`/`ios:open`）。**残り**は Mac 上の対話作業: CocoaPods 導入 → `cap add ios` →
+    Xcode 署名 → 実機 or TestFlight。手順は `docs/ios-build.md`。CocoaPods 未導入・brew 無し・system ruby 2.6。
 - 確定した環境/規約:
   - Next.js **16**（Turbopack 既定）/ React 19 / Tailwind v4。`next lint` は廃止のため
     **`pnpm verify` = `tsc --noEmit && eslint`**（CLAUDE.md §1 の表記より実体はこちら）。

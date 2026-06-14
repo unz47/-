@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 import type { SubscriptionChangeLog } from "@/lib/db";
@@ -29,8 +29,18 @@ function logDate(changedAt: string): string {
 }
 
 export default function SubscriptionLogsPage() {
+  // useSearchParams は静的書き出し時に Suspense 境界が要る（Capacitor 用の output: export 対応）。
+  return (
+    <Suspense fallback={null}>
+      <LogsContent />
+    </Suspense>
+  );
+}
+
+function LogsContent() {
   const router = useRouter();
-  const { id } = useParams<{ id: string }>();
+  // id はパスではなくクエリで受ける（静的1ルートで全契約を扱う＝静的書き出し可能に）。
+  const id = useSearchParams().get("id") ?? "";
   const subs = useSubscriptions();
   const logs = useSubscriptionLogs(id);
 
@@ -46,14 +56,14 @@ export default function SubscriptionLogsPage() {
 
   if (subs && !sub) {
     return (
-      <div className="px-5 pt-14">
+      <div className="px-5 pt-safe">
         <p className="text-sm text-text-muted">サブスクが見つかりません。</p>
       </div>
     );
   }
 
   return (
-    <div className="px-5 pt-14">
+    <div className="px-5 pt-safe">
       <header className="mb-5 flex items-start gap-2">
         <button
           type="button"

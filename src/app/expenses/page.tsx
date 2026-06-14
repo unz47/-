@@ -47,7 +47,7 @@ export default function ExpensesPage() {
   }
 
   return (
-    <div className="px-5 pt-14">
+    <div className="px-5 pt-safe">
       <header className="mb-5 flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">支出</h1>
         <MonthPicker value={currentMonth} onChange={setCurrentMonth} />

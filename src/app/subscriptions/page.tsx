@@ -33,7 +33,7 @@ export default function SubscriptionsPage() {
   const [actionsOpen, setActionsOpen] = useState(false);
 
   function showLogs(sub: Subscription) {
-    router.push(`/subscriptions/${sub.id}/logs`);
+    router.push(`/subscriptions/logs?id=${sub.id}`);
   }
 
   function openActions(sub: Subscription) {
@@ -88,7 +88,7 @@ export default function SubscriptionsPage() {
   }
 
   return (
-    <div className="px-5 pt-14">
+    <div className="px-5 pt-safe">
       <header className="mb-5 flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">サブスク</h1>
         <Button variant="accent" size="sm" onClick={() => setNewOpen(true)}>

@@ -22,7 +22,7 @@ export function TabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-[440px] border-t border-border bg-surface/95 backdrop-blur">
+    <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-[440px] border-t border-border bg-surface/95 pb-safe backdrop-blur">
       {TABS.map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname, href);
         return (

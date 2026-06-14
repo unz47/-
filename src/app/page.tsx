@@ -74,7 +74,7 @@ export default function HomePage() {
   }, [exp, sub, currentMonth]);
 
   return (
-    <div className="px-5 pt-14">
+    <div className="px-5 pt-safe">
       <header className="mb-5 flex items-center justify-between">
         <div>
           <MonthPicker value={currentMonth} onChange={setCurrentMonth} />

@@ -15,9 +15,13 @@
     "e2e:subscriptions": "tsx scripts/e2e-subscriptions.mts",
     "e2e:changelog": "tsx scripts/e2e-changelog.mts",
     "e2e:settings": "tsx scripts/e2e-settings.mts",
-    "e2e:calendar": "tsx scripts/e2e-calendar.mts"
+    "e2e:calendar": "tsx scripts/e2e-calendar.mts",
+    "ios:sync": "next build && cap sync ios",
+    "ios:open": "cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
     "@radix-ui/react-dialog": "^1.1.16",
     "@radix-ui/react-label": "^2.1.9",
     "@radix-ui/react-select": "^2.3.0",
@@ -37,6 +41,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

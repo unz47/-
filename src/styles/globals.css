@@ -58,3 +58,15 @@ body {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
+
+/*
+ * iOS セーフエリア対応（Capacitor / viewport-fit=cover）。
+ * Web ブラウザでは env(safe-area-inset-*) = 0 になり従来どおりの余白に戻る。
+ * pt-safe は従来の pt-14（3.5rem）にノッチ/ステータスバー分を足したもの。
+ */
+@utility pt-safe {
+  padding-top: calc(env(safe-area-inset-top) + 3.5rem);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}

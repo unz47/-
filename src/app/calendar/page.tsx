@@ -61,7 +61,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="px-5 pt-14">
+    <div className="px-5 pt-safe">
       {/* 月ナビゲーション */}
       <header className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-1">
