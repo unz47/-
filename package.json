@@ -14,7 +14,8 @@
     "e2e:dashboard": "tsx scripts/e2e-dashboard.mts",
     "e2e:subscriptions": "tsx scripts/e2e-subscriptions.mts",
     "e2e:changelog": "tsx scripts/e2e-changelog.mts",
-    "e2e:settings": "tsx scripts/e2e-settings.mts"
+    "e2e:settings": "tsx scripts/e2e-settings.mts",
+    "e2e:calendar": "tsx scripts/e2e-calendar.mts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.16",

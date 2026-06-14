@@ -23,3 +23,13 @@ export function formatShortDate(dateStr: string): string {
 export function formatMonthShort(ym: MonthKey): string {
   return format(parseISO(`${ym}-01`), "M月", { locale: ja });
 }
+
+/** "YYYY-MM-DD" → "6月14日（土）"（カレンダー詳細の見出し）。 */
+export function formatFullDay(dateStr: string): string {
+  return format(parseISO(dateStr), "M月d日（E）", { locale: ja });
+}
+
+/** "YYYY-MM-DD" がシステム日付の「今日」か。 */
+export function isTodayStr(dateStr: string): boolean {
+  return isToday(parseISO(dateStr));
+}

@@ -88,10 +88,17 @@ pnpm build            # 本番ビルド（最終確認）
     ロゴ表示（`simple-icons` バンドル＋頭文字アバター。外部CDN不可）。**未着手**。プリセットを cycle-aware で投入する。
   - **手入力導線改善（2026-06-14）**: 登録フローのサービス選択画面の先頭に「＋ 手入力で追加」を独立配置。
     プリセット一覧からは custom を除外し手入力ボタンに集約（`subscription-new-flow.tsx`）。実ブラウザ検証済み。
-  - **カレンダー / 予算の方針決定（2026-06-14, 未実装）**: PROJECT_PLAN §6/§9/§10 に追記済み。
-    `/calendar` を **v0.1.x の読み取り専用ビュー**として追加予定（当月実請求を月グリッドに並べ替えるだけ。
-    `billingDay`/`billingMonth` と `Expense.date` を使用、スキーマ変更・新エンティティなし）。
+  - **カレンダー実装済み（2026-06-14, v0.1.x）**: `/calendar` を**読み取り専用ビュー**として実装。
+    当月実請求（§4）を `lib/calendar.ts`（`buildCalendarMonth`）で日グリッドへ並べ替えるだけ
+    （`billingDay`/`billingMonth` と `Expense.date` を使用、スキーマ変更・新エンティティなし）。
+    `components/calendar/{calendar-grid,day-detail}.tsx` + `app/calendar/page.tsx`、
+    タブバーに「カレンダー」追加（全5タブ）。Figma（node 26:15）準拠。月合計は `monthSummary.total` と一致。
+    検証: `pnpm e2e:calendar` + `pnpm verify`/`pnpm build` 緑。
     予算は **v0.2**。「日別予算割当」は採らず、月予算＋カレンダー上の消化ペース（バーンダウン、超過=danger）で設計。
+  - **サブスク導線改善（2026-06-14）**: 編集・解約が埋もれていた問題を解消。カードは全体が単一タップ標的になり、
+    右の「⋯」から **アクションシート（改定ログ / 編集 / 解約）** を開く（`components/subscriptions/subscription-actions.tsx`、
+    Dialog ボトムシート流用）。解約は確認 1 段の論理削除で、**赤は値上げ専用のため destructive でも赤を使わない**。
+    `SubscriptionCard` は `onEdit`/`onShowLogs` を `onOpenActions` に集約。e2e:subscriptions / e2e:changelog を新フローに更新。物理削除は未提供（方針未確定）。
 - 確定した環境/規約:
   - Next.js **16**（Turbopack 既定）/ React 19 / Tailwind v4。`next lint` は廃止のため
     **`pnpm verify` = `tsc --noEmit && eslint`**（CLAUDE.md §1 の表記より実体はこちら）。

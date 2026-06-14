@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Receipt, Repeat, Settings } from "lucide-react";
+import { CalendarDays, LayoutGrid, Receipt, Repeat, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/", label: "ホーム", icon: LayoutGrid },
+  { href: "/calendar", label: "カレンダー", icon: CalendarDays },
   { href: "/expenses", label: "支出", icon: Receipt },
   { href: "/subscriptions", label: "サブスク", icon: Repeat },
   { href: "/settings", label: "設定", icon: Settings },

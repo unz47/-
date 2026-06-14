@@ -8,13 +8,25 @@ import assert from "node:assert/strict";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 
+/** カードの「⋯」からアクションシートを開く。 */
+async function openActions(page: Page, service: string) {
+  await page.getByRole("button", { name: `${service} の操作` }).click();
+}
+
 async function editAmount(page: Page, service: string, amount: string) {
-  await page.getByRole("button", { name: `${service} を編集` }).click();
+  await openActions(page, service);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
   await page.locator("#e-amt").fill(amount);
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await page
     .getByRole("button", { name: "保存", exact: true })
     .waitFor({ state: "hidden" });
+}
+
+async function showLogs(page: Page, service: string) {
+  await openActions(page, service);
+  await page.getByRole("button", { name: "改定ログ", exact: true }).click();
+  await page.getByRole("heading", { name: "改定ログ" }).waitFor();
 }
 
 async function main() {
@@ -40,9 +52,8 @@ async function main() {
     await page.getByText("値上げ").first().waitFor();
     console.log("✓ 増額 → 一覧に「値上げ」バッジ");
 
-    // 改定ログへ
-    await page.getByRole("button", { name: "Netflix の改定ログを表示" }).click();
-    await page.getByRole("heading", { name: "改定ログ" }).waitFor();
+    // 改定ログへ（⋯ → 改定ログ）
+    await showLogs(page, "Netflix");
 
     await page.getByText("改定 1 回").waitFor();
     await page.getByText(/¥1,590 → ¥1,990/).waitFor();
@@ -66,7 +77,7 @@ async function main() {
     await page.getByRole("button", { name: "戻る" }).click();
     await page.getByRole("heading", { name: "サブスク" }).waitFor();
     await editAmount(page, "Netflix", "1490");
-    await page.getByRole("button", { name: "Netflix の改定ログを表示" }).click();
+    await showLogs(page, "Netflix");
     await page.getByText("改定 2 回").waitFor();
     await page.getByText(/¥1,990 → ¥1,490/).waitFor();
     // 減額の差分が緑（--color-success = rgb(52, 211, 153)）

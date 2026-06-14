@@ -17,6 +17,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SubscriptionCard } from "@/components/subscriptions/subscription-card";
+import { SubscriptionActions } from "@/components/subscriptions/subscription-actions";
 import { SubscriptionNewFlow } from "@/components/forms/subscription-new-flow";
 import { SubscriptionEditForm } from "@/components/forms/subscription-edit-form";
 
@@ -28,9 +29,16 @@ export default function SubscriptionsPage() {
   const [newOpen, setNewOpen] = useState(false);
   const [editing, setEditing] = useState<Subscription | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [actionsSub, setActionsSub] = useState<Subscription | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   function showLogs(sub: Subscription) {
     router.push(`/subscriptions/${sub.id}/logs`);
+  }
+
+  function openActions(sub: Subscription) {
+    setActionsSub(sub);
+    setActionsOpen(true);
   }
 
   const { active, canceled, monthlyTotal, actualThisMonth, annualTotal } =
@@ -99,8 +107,7 @@ export default function SubscriptionsPage() {
             <SubscriptionCard
               key={s.id}
               sub={s}
-              onEdit={openEdit}
-              onShowLogs={showLogs}
+              onOpenActions={openActions}
               recentlyRaised={raisedIds.has(s.id)}
             />
           ))}
@@ -110,12 +117,11 @@ export default function SubscriptionsPage() {
               <p className="px-1 pt-3 text-xs text-text-muted">解約済み</p>
               {canceled.map((s) => (
                 <SubscriptionCard
-              key={s.id}
-              sub={s}
-              onEdit={openEdit}
-              onShowLogs={showLogs}
-              recentlyRaised={raisedIds.has(s.id)}
-            />
+                  key={s.id}
+                  sub={s}
+                  onOpenActions={openActions}
+                  recentlyRaised={raisedIds.has(s.id)}
+                />
               ))}
             </>
           )}
@@ -123,6 +129,13 @@ export default function SubscriptionsPage() {
       )}
 
       <SubscriptionNewFlow open={newOpen} onOpenChange={setNewOpen} />
+      <SubscriptionActions
+        open={actionsOpen}
+        onOpenChange={setActionsOpen}
+        sub={actionsSub}
+        onEdit={openEdit}
+        onShowLogs={showLogs}
+      />
       <SubscriptionEditForm
         open={editOpen}
         onOpenChange={setEditOpen}

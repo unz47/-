@@ -299,13 +299,28 @@ export const SUBSCRIPTION_PRESETS = [
 - [x] 一覧に「改定あり」バッジ — `useRecentlyRaisedSubIds`（直近30日の増額）→ カードに値上げバッジ
 - 受け入れ条件: 金額を変更するとログが1件増え、増額が赤・減額が緑で表示
   → ✅ `pnpm e2e:changelog`（Playwright）で ログ+1・増額=赤/減額=緑（computed color 検証）・契約開始合成 を実ブラウザ検証。
-- 導線: サブスクカードの情報エリアタップ→改定ログ、「編集 ›」→編集（別導線）。
+- 導線（更新）: サブスクカードは全体が単一のタップ標的で、右の「⋯」からアクションシート
+  （改定ログ / 編集 / 解約）を開く（`subscription-actions.tsx`）。編集・解約が埋もれていた問題を解消。
+  解約は確認を 1 段挟む論理削除（赤は値上げ専用のため destructive でも赤は使わない）。
+  e2e は `⋯ → 編集/改定ログ/解約` の新フローに更新済み。
 
 ### Phase 6: 設定・バックアップ
 - [x] カテゴリ管理（追加・色変更・削除）— `app/settings/page.tsx`（既定カテゴリは削除不可、色はパレットから選択）
 - [x] 全データ JSON エクスポート / インポート — `lib/backup.ts`（export/import/clearAll、形式バリデーション付）
 - 受け入れ条件: エクスポート→DBクリア→インポートで復元できる
   → ✅ `pnpm e2e:settings`（Playwright）で カテゴリ追加/削除・エクスポート→全削除→インポート復元 を実ブラウザ検証。
+
+### v0.1.x: カレンダー（読み取り専用ビュー / §6 ・§10）
+- [x] カレンダー集計 — `lib/calendar.ts`（`buildCalendarMonth`。当月実請求 §4 を日グリッドへ並べ替え。
+  サブスクは `billingDay`/`billingMonth`、Expense は `date` で配置。スキーマ変更・新エンティティなし）
+- [x] 月グリッド — `components/calendar/calendar-grid.tsx`（日曜始まり・カテゴリ色ドット＋サブスク課金アイコン・
+  今日=アクセント・選択日=リング）
+- [x] 選択日内訳 — `components/calendar/day-detail.tsx`（都度 ＋ サブスク課金「自動」を一覧）
+- [x] ページ＋月ナビ — `app/calendar/page.tsx`（`< 月 >` ＋「今月」、ヒーローに当月実請求と都度/サブスク併記）
+- [x] タブ追加 — `components/ui/tab-bar.tsx` に「カレンダー」（ホームの次・全5タブ）
+- 受け入れ条件: 当月の課金日・支出が月グリッドに並び、選択日内訳に都度＋サブスクが出る。月合計は `monthSummary.total` と一致。
+  → ✅ `pnpm e2e:calendar`（Playwright）で ヒーロー実請求合算・内訳併記・選択日内訳（都度＋サブスク課金）を実ブラウザ検証。
+    `pnpm verify` / `pnpm build` 緑。Figma（node 26:15）とレイアウト一致を確認。
 
 ---
 

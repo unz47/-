@@ -3,10 +3,15 @@
  * 事前に dev サーバ（http://localhost:3000）を起動しておくこと。
  * 実行: pnpm tsx scripts/e2e-subscriptions.mts
  */
-import { chromium } from "playwright";
+import { chromium, type Page } from "playwright";
 import assert from "node:assert/strict";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
+
+/** カードの「⋯」からアクションシート（改定ログ/編集/解約）を開く。 */
+async function openActions(page: Page, service: string) {
+  await page.getByRole("button", { name: `${service} の操作` }).click();
+}
 
 async function main() {
   const browser = await chromium.launch();
@@ -42,8 +47,9 @@ async function main() {
     await page.getByText("¥2,570").first().waitFor(); // 1590 + 980
     console.log("✓ 月額合計が正しく合算（¥2,570 / 2件）");
 
-    // 編集: Spotify の金額を変更
-    await page.getByRole("button", { name: "Spotify を編集" }).click();
+    // 編集: Spotify の金額を変更（⋯ → 編集）
+    await openActions(page, "Spotify");
+    await page.getByRole("button", { name: "編集", exact: true }).click();
     await page.locator("#e-amt").fill("1280");
     await page.getByRole("button", { name: "保存", exact: true }).click();
     await page
@@ -52,11 +58,12 @@ async function main() {
     await page.getByText("¥2,870").first().waitFor(); // 1590 + 1280
     console.log("✓ 編集で金額更新 → 月額合計も更新（¥2,870）");
 
-    // 解約: Netflix を解約 → 月額合計から外れ、解約済みに移る
-    await page.getByRole("button", { name: "Netflix を編集" }).click();
-    await page.getByRole("button", { name: "このサブスクを解約" }).click();
+    // 解約: Netflix を解約（⋯ → 解約 → 確認）→ 月額合計から外れ、解約済みに移る
+    await openActions(page, "Netflix");
+    await page.getByRole("button", { name: "解約", exact: true }).click();
+    await page.getByRole("button", { name: "解約する", exact: true }).click();
     await page
-      .getByRole("button", { name: "このサブスクを解約" })
+      .getByRole("button", { name: "解約する", exact: true })
       .waitFor({ state: "hidden" });
     await page.getByText("1件 契約中").waitFor();
     await page.getByText("¥1,280").first().waitFor(); // Spotify のみ
