@@ -88,6 +88,10 @@ pnpm build            # 本番ビルド（最終確認）
     ロゴ表示（`simple-icons` バンドル＋頭文字アバター。外部CDN不可）。**未着手**。プリセットを cycle-aware で投入する。
   - **手入力導線改善（2026-06-14）**: 登録フローのサービス選択画面の先頭に「＋ 手入力で追加」を独立配置。
     プリセット一覧からは custom を除外し手入力ボタンに集約（`subscription-new-flow.tsx`）。実ブラウザ検証済み。
+  - **カレンダー / 予算の方針決定（2026-06-14, 未実装）**: PROJECT_PLAN §6/§9/§10 に追記済み。
+    `/calendar` を **v0.1.x の読み取り専用ビュー**として追加予定（当月実請求を月グリッドに並べ替えるだけ。
+    `billingDay`/`billingMonth` と `Expense.date` を使用、スキーマ変更・新エンティティなし）。
+    予算は **v0.2**。「日別予算割当」は採らず、月予算＋カレンダー上の消化ペース（バーンダウン、超過=danger）で設計。
 - 確定した環境/規約:
   - Next.js **16**（Turbopack 既定）/ React 19 / Tailwind v4。`next lint` は廃止のため
     **`pnpm verify` = `tsc --noEmit && eslint`**（CLAUDE.md §1 の表記より実体はこちら）。
