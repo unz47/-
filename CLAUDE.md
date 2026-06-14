@@ -123,8 +123,11 @@ pnpm build            # 本番ビルド（最終確認）
     動的ルート `/subscriptions/[id]/logs` を **クエリ式の静的ルート `/subscriptions/logs?id=...`** に変更
     （`useSearchParams` + Suspense）。`router.push` 側も更新。`pnpm build` で `out/` 生成を確認。
     Capacitor 導入済み（`@capacitor/{core,ios,cli}` v8、`capacitor.config.ts` webDir:"out"、
-    scripts `ios:sync`/`ios:open`）。**残り**は Mac 上の対話作業: CocoaPods 導入 → `cap add ios` →
-    Xcode 署名 → 実機 or TestFlight。手順は `docs/ios-build.md`。CocoaPods 未導入・brew 無し・system ruby 2.6。
+    scripts `ios:sync`/`ios:open`）。**iOS プロジェクト生成済み**（`cap add ios --packagemanager SPM`）＝
+    **SPM モードで CocoaPods/Homebrew 不要**（brew 無し・ruby 2.6 でも OK）。開くのは
+    `ios/App/App.xcodeproj`（`.xcworkspace` ではない）。`cap sync ios` 動作確認済み。
+    **残り**は Xcode 上の署名 → 実機 Run（無料 Apple ID 可）/ TestFlight（有料 $99）。手順 `docs/ios-build.md`。
+    セーフエリア対応済み（`viewport-fit=cover` + `pt-safe`/`pb-safe`、Web は env()=0 で従来どおり）。
 - 確定した環境/規約:
   - Next.js **16**（Turbopack 既定）/ React 19 / Tailwind v4。`next lint` は廃止のため
     **`pnpm verify` = `tsc --noEmit && eslint`**（CLAUDE.md §1 の表記より実体はこちら）。
