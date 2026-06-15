@@ -79,6 +79,17 @@ pnpm build            # 本番ビルド（最終確認）
   - 全 E2E: `pnpm e2e:{expenses,dashboard,subscriptions,changelog,settings}` + データ層 `pnpm check:db`（Playwright/Chromium）。
   - 完了ゲート: `pnpm verify`（tsc + eslint）/ `pnpm build` 緑。
   - 今後（v0.2 以降の要望が来たら）: §9 スコープ外（OCR/予算/CSV/クラウド同期/PWA/認証）を別フェーズで切り出す。
+  - **v0.2 設計メモ（2026-06-15, 未実装）= レシートOCR→店名ベースの散財インサイト**（PROJECT_PLAN §11）。
+    経緯: 当初「写真→金額(OCR)＋場所(EXIF)→接近ナッジ」を構想したが、**写真も家で撮ることが多い**→EXIFの座標=自宅・時刻=家で撮った時刻、
+    で座標ベースは崩れると判明。家撮り＋端末内だけで確実に取れるのは**OCRの中身（店名・購入日時）**。「店名→座標」自動化は外部ジオAPI=不変条件違反で不採用。
+    → 軸を**座標から店名へ**。本命: 写真→OCR→〈金額・店名・購入日時〉を自動入力（確認保存）＋ `merchantKey` で名寄せ集計し店/カテゴリ別散財を可視化。**外部送信ゼロ**。
+    OCRエンジンは端末内（ML Kit/Vision or Tesseract WASM、クラウドVision不採用）。接近ナッジは前提が弱く任意レイヤーに格下げ（手動ジオタグ前提、v0.2/v0.3判断）。
+    段階 A=OCRパイプ / B=店名インサイト(主役) / C=任意ナッジ。**実装未着手**。
+  - **OCRエンジン = Apple Vision に確定（2026-06-15 スパイク検証済み, PROJECT_PLAN §11.7）**。`scripts/spikes/vision-ocr.swift`
+    （macOS で iOS と同一の Vision を走らせる投げ捨てCLI）で実レシート（劣化・一部潰し）を検証 → 店名「zaim マート」/合計「¥1,683」/時刻を正取得、
+    お預り/お釣り/税の罠を回避。確立した型: ①日付/時刻行を金額候補から除外 ②`合計`キーワード行と **y座標が近い** ¥候補を金額に採用
+    ③Vision の**信頼度を「要確認」シグナル**に使う。残: 複数店での `merchantKey` 検証 → スパイク2（Capacitor プラグインでネイティブ Vision を JS へ）。
+    Web版では動かない（アプリ専用）。クラウドVisionは不採用。
   - 不変条件の再掲: 円整数 / 色は CSS 変数経由 / 赤=値上げ・超過専用 / サブスクは集計時動的合算（実体作らない）/
     解約=論理削除 / 永続化は IndexedDB のみ・外部送信なし / React key は一意 ID。
   - **v0.1.x 改修（2026-06-14）**: サブスクに請求周期を追加（`billingCycle` 'monthly'|'yearly' + `billingMonth?`、db v2 マイグレーション）。
