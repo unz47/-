@@ -90,6 +90,15 @@ pnpm build            # 本番ビルド（最終確認）
     お預り/お釣り/税の罠を回避。確立した型: ①日付/時刻行を金額候補から除外 ②`合計`キーワード行と **y座標が近い** ¥候補を金額に採用
     ③Vision の**信頼度を「要確認」シグナル**に使う。残: 複数店での `merchantKey` 検証 → スパイク2（Capacitor プラグインでネイティブ Vision を JS へ）。
     Web版では動かない（アプリ専用）。クラウドVisionは不採用。
+  - **OCR 実装（2026-06-15, 段階A/B 着手・PROJECT_PLAN §11.8）**: TSコアは検証済み、ネイティブは要・実機検証。
+    データ層: `Expense` に `merchant?/merchantKey?/occurredAt?`（db **v3**、`merchantKey` インデックス。任意・移行不要）。
+    `src/lib/ocr/`（types/parse/merchant/visionProvider/capture/index、`scanReceipt()`）。`merchant.ts` の名寄せは
+    書式・店舗番号のみ正規化し**支店統合はしない**（辞書なしには誤マージ）。UI: `ReceiptScanButton`（支出FAB左・OCR非対応環境は非表示）
+    → 撮影→OCR→`ExpenseForm` プレフィル（店名フィールド＋低信頼度に「要確認」、**自動保存せず確認保存**）。
+    ネイティブ: `ios/App/App/VisionOcrPlugin.swift`（CAPPlugin+CAPBridgedPlugin）＋Info.plist 権限文、手順 `docs/ocr-native.md`。
+    新規検証: **`pnpm check:ocr`**（`scripts/fixtures/zaim-receipt.ocr.json` で parseReceipt を assert）。`@capacitor/camera` 追加。
+    eslint は `ios/**` を ignore（cap sync で web ビルドがコピーされ lint が誤爆するため）。
+    残: 複数店 `merchantKey` 検証 / 店別インサイト画面(段階B本体) / 実機で撮影→プレフィル確認。
   - 不変条件の再掲: 円整数 / 色は CSS 変数経由 / 赤=値上げ・超過専用 / サブスクは集計時動的合算（実体作らない）/
     解約=論理削除 / 永続化は IndexedDB のみ・外部送信なし / React key は一意 ID。
   - **v0.1.x 改修（2026-06-14）**: サブスクに請求周期を追加（`billingCycle` 'monthly'|'yearly' + `billingMonth?`、db v2 マイグレーション）。

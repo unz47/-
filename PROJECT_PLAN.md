@@ -456,3 +456,20 @@ macOS の Apple Vision（iOS と同一フレームワーク）でレシート画
 - 確立した型: ①日付/時刻行を先に確定し金額候補から除外、②`合計`等キーワード行と **y 座標が近い** ¥候補を金額に採用、
   ③Vision の **信頼度を「要確認」シグナル**に使う（低conf フィールドだけ確認を促す＝自動入力＋確認保存と整合）。
 - 結論: **エンジンは実用十分**。次は複数店での `merchantKey` 検証 → スパイク2（Capacitor プラグインでネイティブ Vision を JS へ）。
+
+### 11.8 実装状況（2026-06-15・段階A/B 着手）
+**TS コア（検証済み・端末不要）:**
+- データ層: `Expense` に `merchant?/merchantKey?/occurredAt?` を追加（db v3、`merchantKey` インデックス。任意・移行不要）。
+- `src/lib/ocr/`: `types`（OcrLine/OcrResult/ParsedReceipt/OcrProvider）/ `parse`（スパイクの型を移植）/
+  `merchant`（名寄せ。書式・店舗番号のみ正規化、支店統合はしない）/ `visionProvider` / `capture` / `index`（`scanReceipt`）。
+- 検証: `pnpm check:ocr`（実レシートの固定OCR結果 `scripts/fixtures/zaim-receipt.ocr.json` で
+  合計¥1,683・店名・日時の抽出と名寄せを assert）。`pnpm verify`/`build`/`e2e:expenses` 緑。
+
+**UI:**
+- `ReceiptScanButton`（支出タブ FAB 左。OCR非対応環境では非表示）→ 撮影→OCR→`ExpenseForm` にプレフィル。
+- `ExpenseForm` に店名フィールド＋「要確認」表示（低信頼度フィールド）。**自動保存せずユーザー確認して保存**。
+
+**ネイティブ（要・実機検証）:** `ios/App/App/VisionOcrPlugin.swift`（CAPPlugin+CAPBridgedPlugin）、
+Info.plist にカメラ/写真の権限文。手順は `docs/ocr-native.md`。実機で Run して撮影→プレフィルを確認するのが残タスク。
+
+**未了:** 複数店での `merchantKey` 実データ検証 / 店別インサイト画面（段階B本体）/ カテゴリ自動推定（§11.6）。
