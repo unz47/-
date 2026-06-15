@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // ネイティブ iOS プロジェクト（cap sync で web ビルドが ios/App/App/public へ
+    // コピーされる。lint 対象外）。
+    "ios/**",
   ]),
 ]);
 
