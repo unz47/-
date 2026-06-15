@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "verify": "tsc --noEmit && eslint",
     "check:db": "tsx scripts/check-db.mts",
+    "check:ocr": "tsx scripts/check-ocr.mts",
     "e2e:expenses": "tsx scripts/e2e-expenses.mts",
     "e2e:dashboard": "tsx scripts/e2e-dashboard.mts",
     "e2e:subscriptions": "tsx scripts/e2e-subscriptions.mts",
@@ -20,6 +21,7 @@
     "ios:open": "cap open ios"
   },
   "dependencies": {
+    "@capacitor/camera": "^8.2.0",
     "@capacitor/core": "^8.4.0",
     "@capacitor/ios": "^8.4.0",
     "@radix-ui/react-dialog": "^1.1.16",

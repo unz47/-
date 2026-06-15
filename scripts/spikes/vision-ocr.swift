@@ -28,11 +28,37 @@ try handler.perform([request])
 let obs = request.results ?? []
 
 // Vision の原点は左下。minY 降順 ≒ 上→下の並びに直す。
-struct Line { let text: String; let conf: Float; let y: CGFloat; let x: CGFloat }
+struct Line { let text: String; let conf: Float; let y: CGFloat; let x: CGFloat; let w: CGFloat; let h: CGFloat }
 let lines: [Line] = obs.compactMap { o in
   guard let t = o.topCandidates(1).first else { return nil }
-  return Line(text: t.string, conf: t.confidence, y: o.boundingBox.minY, x: o.boundingBox.minX)
+  let b = o.boundingBox
+  return Line(text: t.string, conf: t.confidence, y: b.minY, x: b.minX, w: b.width, h: b.height)
 }.sorted { $0.y > $1.y }
+
+// --json: パーサ検証用フィクスチャ（OcrLine[] 形）を JSON で出力して終了。
+if args.contains("--json") {
+  func esc(_ s: String) -> String {
+    var o = ""
+    for c in s.unicodeScalars {
+      switch c {
+      case "\"": o += "\\\""
+      case "\\": o += "\\\\"
+      case "\n": o += "\\n"
+      case "\t": o += "\\t"
+      default: o.unicodeScalars.append(c)
+      }
+    }
+    return o
+  }
+  var items: [String] = []
+  for l in lines {
+    items.append(String(
+      format: "  {\"text\":\"%@\",\"confidence\":%.4f,\"x\":%.5f,\"y\":%.5f,\"width\":%.5f,\"height\":%.5f}",
+      esc(l.text), l.conf, Double(l.x), Double(l.y), Double(l.w), Double(l.h)))
+  }
+  print("{\"lines\":[\n" + items.joined(separator: ",\n") + "\n]}")
+  exit(0)
+}
 
 print("==== RAW（上→下 / conf\\ttext）====")
 for l in lines { print(String(format: "%.2f\t%@", l.conf, l.text)) }

@@ -9,6 +9,12 @@ export interface Expense {
   categoryId: string;
   memo?: string;
   createdAt: string; // ISO
+  // v3: レシートOCR由来（任意・§11）。merchant は印字された店名（生）、
+  // merchantKey は名寄せ用の正規化キー（店/カテゴリ別集計はこれで束ねる）。
+  merchant?: string;
+  merchantKey?: string;
+  // 実際の購入日時（ISO）。OCR由来。date（家計簿上の日付）とは別物。
+  occurredAt?: string;
 }
 
 export interface Category {
@@ -68,6 +74,11 @@ export class AppDB extends Dexie {
         .modify((s: Partial<Subscription>) => {
           if (s.billingCycle === undefined) s.billingCycle = "monthly";
         });
+    });
+    // v3: 支出に merchantKey を追加（OCR名寄せ・店別集計用のインデックス）。
+    // 既存レコードは merchant 系未設定のまま有効（任意フィールド・移行不要）。
+    this.version(3).stores({
+      expenses: "id, date, categoryId, merchantKey",
     });
   }
 }
