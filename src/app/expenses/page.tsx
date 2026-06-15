@@ -15,7 +15,11 @@ import { useSubscriptions } from "@/store/useSubscriptionStore";
 import { Card } from "@/components/ui/card";
 import { MonthPicker } from "@/components/ui/month-picker";
 import { ExpenseList } from "@/components/expenses/expense-list";
-import { ExpenseForm } from "@/components/forms/expense-form";
+import {
+  ExpenseForm,
+  type ReceiptPrefill,
+} from "@/components/forms/expense-form";
+import { ReceiptScanButton } from "@/components/forms/receipt-scan-button";
 
 export default function ExpensesPage() {
   const currentMonth = useExpenseStore((s) => s.currentMonth);
@@ -27,6 +31,7 @@ export default function ExpensesPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
+  const [prefill, setPrefill] = useState<ReceiptPrefill | undefined>(undefined);
 
   const monthExpenses = useMemo(
     () => expensesInMonth(expenses ?? [], currentMonth),
@@ -39,10 +44,17 @@ export default function ExpensesPage() {
 
   function openAdd() {
     setEditing(null);
+    setPrefill(undefined);
     setFormOpen(true);
   }
   function openEdit(expense: Expense) {
     setEditing(expense);
+    setPrefill(undefined);
+    setFormOpen(true);
+  }
+  function openFromReceipt(p: ReceiptPrefill) {
+    setEditing(null);
+    setPrefill(p);
     setFormOpen(true);
   }
 
@@ -77,9 +89,10 @@ export default function ExpensesPage() {
         onEdit={openEdit}
       />
 
-      {/* FAB（アプリシェルの右下、タブバーの上に固定） */}
+      {/* FAB（アプリシェルの右下、タブバーの上に固定）。左にレシートスキャン。 */}
       <div className="pointer-events-none fixed inset-x-0 bottom-20 z-30 mx-auto w-full max-w-[440px]">
-        <div className="flex justify-end px-5">
+        <div className="flex items-end justify-end gap-3 px-5">
+          <ReceiptScanButton onScanned={openFromReceipt} />
           <button
             type="button"
             onClick={openAdd}
@@ -96,6 +109,7 @@ export default function ExpensesPage() {
         onOpenChange={setFormOpen}
         expense={editing}
         defaultDate={undefined}
+        prefill={prefill}
       />
     </div>
   );
