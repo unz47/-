@@ -26,6 +26,8 @@
 	<string>レシートを撮影して金額・店名を読み取るために使います。画像は端末内で処理され、外部に送信されません。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>レシート写真を選んで金額・店名を読み取るために使います。画像は端末内で処理され、外部に送信されません。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>撮影したレシート写真を写真ライブラリに保存する場合に使います。</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

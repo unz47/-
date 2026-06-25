@@ -15,10 +15,13 @@ public class VisionOcrPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     @objc func recognizeText(_ call: CAPPluginCall) {
+        print("[VisionOcr] recognizeText called. path=\(call.getString("path") ?? "nil") base64?=\(call.getString("base64") != nil)")
         guard let cgImage = loadImage(call) else {
+            print("[VisionOcr] 画像を読み込めませんでした")
             call.reject("画像を読み込めませんでした")
             return
         }
+        print("[VisionOcr] image loaded: \(cgImage.width)x\(cgImage.height)")
 
         let request = VNRecognizeTextRequest { request, error in
             if let error = error {
@@ -39,6 +42,7 @@ public class VisionOcrPlugin: CAPPlugin, CAPBridgedPlugin {
                     "height": b.height
                 ])
             }
+            print("[VisionOcr] recognized \(lines.count) lines")
             call.resolve(["lines": lines])
         }
         request.recognitionLanguages = ["ja-JP", "en-US"]

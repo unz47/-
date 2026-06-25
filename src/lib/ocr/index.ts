@@ -31,9 +31,21 @@ export async function scanReceipt(): Promise<ScanOutcome> {
   const image = await captureReceiptImage();
   if (!image) return { status: "canceled" };
   try {
+    console.log("[ocr] recognizing image", image.path);
     const result = await provider.recognize(image);
-    return { status: "ok", receipt: parseReceipt(result) };
+    const receipt = parseReceipt(result);
+    console.log(
+      "[ocr] lines=%d parsed=%o",
+      result.lines.length,
+      {
+        amount: receipt.amount,
+        merchant: receipt.merchant,
+        occurredAt: receipt.occurredAt,
+      },
+    );
+    return { status: "ok", receipt };
   } catch (e) {
+    console.log("[ocr] error", e);
     return { status: "error", message: e instanceof Error ? e.message : String(e) };
   }
 }
