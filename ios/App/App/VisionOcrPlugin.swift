@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import Vision
+import VisionKit
 import UIKit
 
 /// レシートOCR（§11）。JS から呼ばれ、Apple Vision で端末内 OCR して行データを返す。
@@ -12,8 +13,35 @@ public class VisionOcrPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "VisionOcr"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "recognizeText", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getCapabilities", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "getCapabilities", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "scanDocument", returnType: CAPPluginReturnPromise)
     ]
+
+    /// scanDocument 中の保留 call（VisionKit のデリゲート完了まで保持）。
+    private var pendingScanCall: CAPPluginCall?
+
+    /// VisionKit ドキュメントスキャナで撮影する（§11.9）。
+    /// 縁検出・台形補正・コントラスト強調された画像を temp に書き出し、その path を返す。
+    /// OCR は既存の recognizeText が担う（撮影と認識を分離）。キャンセル時は { canceled: true }。
+    @objc func scanDocument(_ call: CAPPluginCall) {
+        guard VNDocumentCameraViewController.isSupported else {
+            call.reject("この端末はドキュメントスキャナに対応していません")
+            return
+        }
+        self.pendingScanCall = call
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                print("[VisionOcr] scanDocument: presenter(viewController) が nil")
+                self.pendingScanCall = nil
+                call.reject("画面を表示できませんでした")
+                return
+            }
+            print("[VisionOcr] scanDocument: スキャナを表示")
+            let scanner = VNDocumentCameraViewController()
+            scanner.delegate = self
+            presenter.present(scanner, animated: true)
+        }
+    }
 
     /// 端末能力（§11.9）。TS 側が抽出方式（llm / heuristic）を分岐するのに使う。
     /// 現状は端末内LLM=false 固定（まず非対応機経路=Vision+パースで動かす）。
@@ -87,5 +115,56 @@ public class VisionOcrPlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
         return nil
+    }
+}
+
+// MARK: - VisionKit ドキュメントスキャナ（§11.9）
+extension VisionOcrPlugin: VNDocumentCameraViewControllerDelegate {
+    public func documentCameraViewController(
+        _ controller: VNDocumentCameraViewController,
+        didFinishWith scan: VNDocumentCameraScan
+    ) {
+        print("[VisionOcr] didFinishWith pageCount=\(scan.pageCount)")
+        controller.dismiss(animated: true)
+        let call = pendingScanCall
+        pendingScanCall = nil
+        guard scan.pageCount > 0 else {
+            print("[VisionOcr] pageCount=0 のため canceled 扱い")
+            call?.resolve(["canceled": true])
+            return
+        }
+        // レシートは 1 枚想定。先頭ページの補正済み画像を temp に書き出して path を返す。
+        let image = scan.imageOfPage(at: 0)
+        guard let data = image.jpegData(compressionQuality: 0.9) else {
+            call?.reject("スキャン画像の変換に失敗しました")
+            return
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("receipt-scan-\(UUID().uuidString).jpg")
+        do {
+            try data.write(to: url)
+            print("[VisionOcr] scanned page saved: \(url.path)")
+            call?.resolve(["path": url.path])
+        } catch {
+            call?.reject(error.localizedDescription)
+        }
+    }
+
+    public func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+        print("[VisionOcr] スキャナをキャンセル")
+        controller.dismiss(animated: true)
+        let call = pendingScanCall
+        pendingScanCall = nil
+        call?.resolve(["canceled": true])
+    }
+
+    public func documentCameraViewController(
+        _ controller: VNDocumentCameraViewController,
+        didFailWithError error: Error
+    ) {
+        controller.dismiss(animated: true)
+        let call = pendingScanCall
+        pendingScanCall = nil
+        call?.reject(error.localizedDescription)
     }
 }

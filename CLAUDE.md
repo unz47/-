@@ -101,9 +101,9 @@ pnpm build            # 本番ビルド（最終確認）
     書式・店舗番号のみ正規化し**支店統合はしない**（辞書なしには誤マージ）。UI: `ReceiptScanButton`（支出FAB左・OCR非対応環境は非表示）
     → 撮影→OCR→`ExpenseForm` プレフィル（店名フィールド＋低信頼度に「要確認」、**自動保存せず確認保存**）。
     ネイティブ: `ios/App/App/VisionOcrPlugin.swift`（CAPPlugin+CAPBridgedPlugin）＝**出荷経路**（§11.9 で端末内確定）。
-    アプリ側はまだクラウドに配線しておらず、この端末内経路が生きている（`src/` に OCR_PROXY 参照なし）。
-    残: ①Swift にドキュメントスキャナ(`VNDocumentCameraViewController`)＋Visionチューニング(`usesLanguageCorrection=false`) ②TS に能力分岐シーム
-    ③対応機向け Foundation Models 抽出 ④実機(iPhone 11 Pro Max)で撮影→プレフィル精度確認 ⑤複数店 `merchantKey` 検証 / 店別インサイト(段階B本体)。
+    実装済み: ①ドキュメントスキャナ `scanDocument`（VisionKit、`capture.ts` が iOS=スキャナ/フォールバック=Camera。登録は `src/lib/ocr/plugin.ts` 集約）
+    ②TS 能力分岐シーム（`extractionTier`/`extractReceipt`/`capabilities`）＋Visionチューニング(`usesLanguageCorrection=false`)。**要 Xcode 再ビルド**。
+    残: ③対応機向け Foundation Models 抽出 ④実機(iPhone 11 Pro Max)で撮影→プレフィル精度確認 ⑤複数店 `merchantKey` 検証 / 店別インサイト(段階B本体)。
   - 不変条件の再掲: 円整数 / 色は CSS 変数経由 / 赤=値上げ・超過専用 / サブスクは集計時動的合算（実体作らない）/
     解約=論理削除 / 永続化は IndexedDB のみ・**出荷アプリは外部送信なし（OCR も端末内＝§11.9。クラウド試作 ocr-proxy は全撤去済み）** / React key は一意 ID。
   - **v0.1.x 改修（2026-06-14）**: サブスクに請求周期を追加（`billingCycle` 'monthly'|'yearly' + `billingMonth?`、db v2 マイグレーション）。

@@ -4,7 +4,12 @@
 // ・各フィールドに信頼度を添える（低いものだけ UI で「要確認」にする）
 import type { OcrLine, OcrResult, ParsedReceipt } from "./types";
 
-const TOTAL_KEYWORDS = ["合計", "お会計", "総額", "ご請求", "計"];
+// 最終支払額（税込）を指すラベル。"計" 単体は "小計"(税抜) に誤マッチするので入れない。
+const TOTAL_KEYWORDS = ["合計", "お会計", "お支払", "ご請求", "総額"];
+// 税抜・小計は最終支払額ではないので合計候補から除外する（§11.9: 税抜を拾う誤りを防ぐ）。
+const TAX_EXCLUDED_KEYWORDS = ["小計", "税抜", "税抜き", "本体価格"];
+// 税込が明示されている合計行を優先するためのヒント。
+const TAX_INCLUDED_HINT = ["税込", "税込み"];
 const STORE_BLOCKLIST = [
   ...TOTAL_KEYWORDS,
   "領収",
@@ -65,13 +70,32 @@ export function parseReceipt(result: OcrResult): ParsedReceipt {
     dateConfidence = dateLine.confidence;
   }
 
-  // --- 金額（合計のy座標マッチ → 同一行の¥候補。なければ最大値）---
+  // --- 金額（税込の合計を優先。税抜/小計は除外。同一行の¥候補をy座標で拾う）---
   let amount: number | undefined;
   let amountConfidence: number | undefined;
-  const kw = lines.find((l) =>
-    TOTAL_KEYWORDS.some((k) => l.text.includes(k)),
+
+  // 合計系の行から、税抜/小計を除外。税込が明示された行があればそれを優先する。
+  const totalLines = lines.filter(
+    (l) =>
+      TOTAL_KEYWORDS.some((k) => l.text.includes(k)) &&
+      !TAX_EXCLUDED_KEYWORDS.some((s) => l.text.includes(s)),
   );
-  if (kw) {
+  const taxIncluded = totalLines.filter((l) =>
+    TAX_INCLUDED_HINT.some((h) => l.text.includes(h)),
+  );
+  const candidates = taxIncluded.length ? taxIncluded : totalLines;
+
+  // 下（レシート末尾）にある合計ほど最終支払額に近いので、末尾から探す。
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    const kw = candidates[i];
+    // ラベルと金額が同じ行に入っているケース（"合計 ¥1,683"）。
+    const inline = yenOf(kw.text);
+    if (inline !== null) {
+      amount = inline;
+      amountConfidence = kw.confidence;
+      break;
+    }
+    // ラベルと金額が別行（左右）なケース。y 座標が近い ¥候補を採用。
     const sameRow = lines
       .map((l) => ({ line: l, v: yenOf(l.text), dy: Math.abs(l.y - kw.y) }))
       .filter((c) => c.v !== null && c.dy < SAME_ROW_DY)
@@ -79,11 +103,11 @@ export function parseReceipt(result: OcrResult): ParsedReceipt {
     if (sameRow) {
       amount = sameRow.v!;
       amountConfidence = sameRow.line.confidence;
-    } else if (yenOf(kw.text) !== null) {
-      amount = yenOf(kw.text)!;
-      amountConfidence = kw.confidence;
+      break;
     }
   }
+
+  // フォールバック: 合計行から取れなければ最大値。
   if (amount === undefined) {
     let best: { v: number; conf: number } | undefined;
     for (const l of lines) {

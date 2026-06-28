@@ -1,18 +1,8 @@
 // iOS ネイティブ Apple Vision を呼ぶ OcrProvider（§11.2）。
 // JS からは Capacitor プラグイン "VisionOcr" 経由。ネイティブ(iOS)でのみ動作する。
-import { Capacitor, registerPlugin } from "@capacitor/core";
-import type { OcrLine, OcrProvider, OcrResult } from "./types";
-
-interface VisionOcrPlugin {
-  recognizeText(options: {
-    path?: string;
-    base64?: string;
-  }): Promise<{ lines: OcrLine[] }>;
-  /** 端末能力（§11.9）。旧ビルド/未実装時は reject されうるので呼び出し側で握り潰す。 */
-  getCapabilities(): Promise<{ onDeviceLLM: boolean }>;
-}
-
-const VisionOcr = registerPlugin<VisionOcrPlugin>("VisionOcr");
+import { Capacitor } from "@capacitor/core";
+import type { OcrProvider, OcrResult } from "./types";
+import { VisionOcr } from "./plugin";
 
 export const visionProvider: OcrProvider = {
   async isAvailable() {
