@@ -31,10 +31,26 @@ export interface ParsedReceipt {
   rawLines: string[];
 }
 
+/**
+ * 抽出の方式（§11.9）。端末の能力で分岐する:
+ * - "llm": 対応機（A17 Pro〜 / iOS26+）で端末内 LLM（Foundation Models）による構造化抽出。
+ * - "heuristic": 非対応機。Apple Vision のテキストを parse.ts で解析（既存）。
+ * いずれも**端末内完結・外部送信なし**。
+ */
+export type ExtractionTier = "llm" | "heuristic";
+
+/** 端末の OCR 関連能力。 */
+export interface OcrCapabilities {
+  /** 端末内 LLM（Foundation Models）が使えるか。 */
+  onDeviceLLM: boolean;
+}
+
 /** OCR エンジンの抽象。端末（iOS ネイティブ Vision）でだけ利用可能。 */
 export interface OcrProvider {
   /** 現在の環境で OCR が使えるか（ネイティブのみ true）。 */
   isAvailable(): Promise<boolean>;
   /** 画像（ファイルパス or base64）を OCR する。 */
   recognize(image: { path?: string; base64?: string }): Promise<OcrResult>;
+  /** 端末能力（LLM 対応可否など）。未実装プロバイダは省略可（= 非対応扱い）。 */
+  capabilities?(): Promise<OcrCapabilities>;
 }

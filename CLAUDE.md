@@ -43,7 +43,9 @@ pnpm build            # 本番ビルド（最終確認）
 ### 必ず守る設計判断（§10）
 - **サブスクは Expense に実体を作らない**。月集計時に動的合算（§4）。二重計上を避ける。
 - **プリセット価格は固定初期値**。最新価格を調べに行かない。ユーザー上書き前提。
-- **永続化は IndexedDB のみ**。サーバー送信・外部API送信は一切しない（プライバシー優先）。
+- **永続化は IndexedDB のみ。出荷アプリは外部送信を一切しない**（プライバシー優先）。OCR も**端末内完結**
+  （Apple Vision + 対応機は Foundation Models、PROJECT_PLAN §11.9）。クラウド OCR（`ocr-proxy/`）は
+  試作後に**全撤去済み**（2026-06-28）。再導入しない。
 - **赤(`--color-danger`)は値上げ/予算超過専用**。装飾に赤を使わない。改定: 増額=danger / 減額=success。
 - **解約は論理削除**（`canceledAt` セット）。レコードは消さない。
 - **金額は円・整数**。小数を持たない。
@@ -82,25 +84,28 @@ pnpm build            # 本番ビルド（最終確認）
   - **v0.2 設計メモ（2026-06-15, 未実装）= レシートOCR→店名ベースの散財インサイト**（PROJECT_PLAN §11）。
     経緯: 当初「写真→金額(OCR)＋場所(EXIF)→接近ナッジ」を構想したが、**写真も家で撮ることが多い**→EXIFの座標=自宅・時刻=家で撮った時刻、
     で座標ベースは崩れると判明。家撮り＋端末内だけで確実に取れるのは**OCRの中身（店名・購入日時）**。「店名→座標」自動化は外部ジオAPI=不変条件違反で不採用。
-    → 軸を**座標から店名へ**。本命: 写真→OCR→〈金額・店名・購入日時〉を自動入力（確認保存）＋ `merchantKey` で名寄せ集計し店/カテゴリ別散財を可視化。**外部送信ゼロ**。
-    OCRエンジンは端末内（ML Kit/Vision or Tesseract WASM、クラウドVision不採用）。接近ナッジは前提が弱く任意レイヤーに格下げ（手動ジオタグ前提、v0.2/v0.3判断）。
-    段階 A=OCRパイプ / B=店名インサイト(主役) / C=任意ナッジ。**実装未着手**。
-  - **OCRエンジン = Apple Vision に確定（2026-06-15 スパイク検証済み, PROJECT_PLAN §11.7）**。`scripts/spikes/vision-ocr.swift`
-    （macOS で iOS と同一の Vision を走らせる投げ捨てCLI）で実レシート（劣化・一部潰し）を検証 → 店名「zaim マート」/合計「¥1,683」/時刻を正取得、
-    お預り/お釣り/税の罠を回避。確立した型: ①日付/時刻行を金額候補から除外 ②`合計`キーワード行と **y座標が近い** ¥候補を金額に採用
-    ③Vision の**信頼度を「要確認」シグナル**に使う。残: 複数店での `merchantKey` 検証 → スパイク2（Capacitor プラグインでネイティブ Vision を JS へ）。
-    Web版では動かない（アプリ専用）。クラウドVisionは不採用。
+    → 軸を**座標から店名へ**。本命: 写真→OCR→〈金額・店名・購入日時〉を自動入力（確認保存）＋ `merchantKey` で名寄せ集計し店/カテゴリ別散財を可視化。
+    接近ナッジは前提が弱く任意レイヤーに格下げ（手動ジオタグ前提、v0.2/v0.3判断）。段階 A=OCRパイプ / B=店名インサイト(主役) / C=任意ナッジ。
+  - **★OCRエンジン = 端末内に確定・iOS専用配布（2026-06-28, PROJECT_PLAN §11.9）**。ストア公開前提で、コスト/トークン悪用/
+    他人の財務データ預かりの3点からクラウドは不適 → 試作 `ocr-proxy/` は**全撤去済み**（AWS/コードとも削除）。外部送信ゼロを維持。再導入しない。
+    構成（全て端末内）: 撮影=**VisionKit ドキュメントスキャナ**（台形補正・コントラスト強調）→ 文字起こし=**Apple Vision** →
+    抽出を**端末能力で分岐**: 対応機(A17 Pro〜/iOS26+)=**Foundation Models（端末内LLM, Guided Generation）** / 非対応機=**ヒューリスティックパース(parse.ts)**。
+    分岐の継ぎ目は実装済み（`extractionTier`/`extractReceipt` in `src/lib/ocr/index.ts`、`OcrProvider.capabilities`）。今は全機 heuristic。
+    **まず非対応機経路(Vision+パース)から実装**（開発機 iPhone 11 Pro Max=A13 が LLM 非対応＝自分の確認経路）。LLM検証は Apple Silicon Mac でも可。
+    「精度クソ」の主因＝生写真OCR＋`usesLanguageCorrection=true`。対策＝ドキュメントスキャナ化＋補正オフ（Swift は補正オフ済み・要 Xcode 再ビルド）。
+  - **OCR スパイク（2026-06-15, §11.7・履歴）**: `scripts/spikes/vision-ocr.swift` で実レシート検証 → 店名「zaim マート」/合計「¥1,683」/時刻を正取得、
+    お預り/お釣り/税の罠を回避。確立した型（parse.ts に継承）: ①日付/時刻行を金額候補から除外 ②`合計`キーワード行と y座標が近い ¥候補を採用 ③信頼度を「要確認」シグナルに使う。
   - **OCR 実装（2026-06-15, 段階A/B 着手・PROJECT_PLAN §11.8）**: TSコアは検証済み、ネイティブは要・実機検証。
     データ層: `Expense` に `merchant?/merchantKey?/occurredAt?`（db **v3**、`merchantKey` インデックス。任意・移行不要）。
     `src/lib/ocr/`（types/parse/merchant/visionProvider/capture/index、`scanReceipt()`）。`merchant.ts` の名寄せは
     書式・店舗番号のみ正規化し**支店統合はしない**（辞書なしには誤マージ）。UI: `ReceiptScanButton`（支出FAB左・OCR非対応環境は非表示）
     → 撮影→OCR→`ExpenseForm` プレフィル（店名フィールド＋低信頼度に「要確認」、**自動保存せず確認保存**）。
-    ネイティブ: `ios/App/App/VisionOcrPlugin.swift`（CAPPlugin+CAPBridgedPlugin）＋Info.plist 権限文、手順 `docs/ocr-native.md`。
-    新規検証: **`pnpm check:ocr`**（`scripts/fixtures/zaim-receipt.ocr.json` で parseReceipt を assert）。`@capacitor/camera` 追加。
-    eslint は `ios/**` を ignore（cap sync で web ビルドがコピーされ lint が誤爆するため）。
-    残: 複数店 `merchantKey` 検証 / 店別インサイト画面(段階B本体) / 実機で撮影→プレフィル確認。
+    ネイティブ: `ios/App/App/VisionOcrPlugin.swift`（CAPPlugin+CAPBridgedPlugin）＝**出荷経路**（§11.9 で端末内確定）。
+    アプリ側はまだクラウドに配線しておらず、この端末内経路が生きている（`src/` に OCR_PROXY 参照なし）。
+    残: ①Swift にドキュメントスキャナ(`VNDocumentCameraViewController`)＋Visionチューニング(`usesLanguageCorrection=false`) ②TS に能力分岐シーム
+    ③対応機向け Foundation Models 抽出 ④実機(iPhone 11 Pro Max)で撮影→プレフィル精度確認 ⑤複数店 `merchantKey` 検証 / 店別インサイト(段階B本体)。
   - 不変条件の再掲: 円整数 / 色は CSS 変数経由 / 赤=値上げ・超過専用 / サブスクは集計時動的合算（実体作らない）/
-    解約=論理削除 / 永続化は IndexedDB のみ・外部送信なし / React key は一意 ID。
+    解約=論理削除 / 永続化は IndexedDB のみ・**出荷アプリは外部送信なし（OCR も端末内＝§11.9。クラウド試作 ocr-proxy は全撤去済み）** / React key は一意 ID。
   - **v0.1.x 改修（2026-06-14）**: サブスクに請求周期を追加（`billingCycle` 'monthly'|'yearly' + `billingMonth?`、db v2 マイグレーション）。
     集計は「月額換算(monthlyEquivalent)」と「当月実請求(actualChargeInMonth)」の2系統（aggregate.ts）。
     ダッシュボード当月総支出・月推移・カテゴリ別は当月実請求基準（年額は請求月にスパイク）、UI に月額換算を併記。PROJECT_PLAN §4/§10 更新済み。

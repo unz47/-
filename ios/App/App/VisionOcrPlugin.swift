@@ -11,8 +11,17 @@ public class VisionOcrPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "VisionOcrPlugin"
     public let jsName = "VisionOcr"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "recognizeText", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "recognizeText", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getCapabilities", returnType: CAPPluginReturnPromise)
     ]
+
+    /// 端末能力（§11.9）。TS 側が抽出方式（llm / heuristic）を分岐するのに使う。
+    /// 現状は端末内LLM=false 固定（まず非対応機経路=Vision+パースで動かす）。
+    /// TODO(§11.9): LLMアーム実装時に Foundation Models の availability で実検出へ差し替える
+    ///   （iOS26+ / A17 Pro〜。`if #available(iOS 26, *)` + SystemLanguageModel）。
+    @objc func getCapabilities(_ call: CAPPluginCall) {
+        call.resolve(["onDeviceLLM": false])
+    }
 
     @objc func recognizeText(_ call: CAPPluginCall) {
         print("[VisionOcr] recognizeText called. path=\(call.getString("path") ?? "nil") base64?=\(call.getString("base64") != nil)")
@@ -47,7 +56,9 @@ public class VisionOcrPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         request.recognitionLanguages = ["ja-JP", "en-US"]
         request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
+        // レシートは金額・店舗番号・略語が多く、言語補正は誤補正（例: 数字→単語）の害が大きい。
+        // §11.9: 補正オフが精度向上の要。
+        request.usesLanguageCorrection = false
 
         DispatchQueue.global(qos: .userInitiated).async {
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
