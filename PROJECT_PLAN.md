@@ -545,12 +545,15 @@ app/(expo-router routes・薄い)  src/{screens, features, entities, shared/{ui,
 - #5 サブスク 追加/解約/再契約
 - #6 カレンダー（読み取り専用ビュー移植）
 - #7 設定（件数・カテゴリ・全削除）
+- #8 ライト/ダーク両対応のテーマ基盤（Daylight + Midnight Ledger、CSS変数化、設定で切替）
+- #9 編集フロー（支出/サブスク）+ 改定ログ（増額=danger/減額=success）
 
 ### 12.3 未了（多くは実機検証が必要）
 - **OCR ネイティブモジュール**（Capacitor の Swift を Expo ネイティブモジュールへ移植。
   VNDocumentCameraViewController + Vision + 対応機 Foundation Models）。**要 dev build / 実機**。
 - **バックアップ/復元**（expo-file-system/sharing/document-picker。**要実機検証**）。
-- 支出/サブスクの**編集**フロー、改定ログ（編集時に記録）。
+- ~~支出/サブスクの編集フロー、改定ログ~~ → #9 で実装済み。
+- **テーマ設定の永続化**（再起動後も保持。settings テーブルへ保存）。
 - **全画面の実機目視**（NativeWind描画・SQLite動作はバンドル検証のみ＝実機未確認）。
 - **カットオーバー**: mobile/ をルート昇格 → Web版削除（feature parity 到達後・ユーザー同席で）。
 
