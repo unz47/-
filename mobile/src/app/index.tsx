@@ -1,5 +1,4 @@
-// ルートは薄く保ち、画面本体は screens/ に置く（Bulletproof）。
-// ※タブバー導入までの暫定で支出画面をホームにしている（次スライスで5タブ構成にする）。
-import { ExpensesScreen } from "@/screens/expenses/expenses-screen";
+// ホームタブ。ルートは薄く、画面本体は screens/（Bulletproof）。
+import { DashboardScreen } from "@/screens/dashboard/dashboard-screen";
 
-export default ExpensesScreen;
+export default DashboardScreen;

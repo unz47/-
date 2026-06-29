@@ -1,9 +1,24 @@
-import { DarkTheme, ThemeProvider } from "expo-router";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { ActivityIndicator, type ColorValue, Text, View } from "react-native";
 
-import AppTabs from "@/components/app-tabs";
 import { useDatabaseReady } from "@/shared/db/use-database";
 import "@/global.css";
+
+// Midnight Ledger（PROJECT_PLAN §3）。タブバーは surface 面、アクティブは accent。
+const TAB_SCREEN_OPTIONS = {
+  headerShown: false,
+  tabBarStyle: { backgroundColor: "#151a23", borderTopColor: "#2a313d" },
+  tabBarActiveTintColor: "#2dd4bf",
+  tabBarInactiveTintColor: "#9ba4b4",
+} as const;
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
+const icon =
+  (name: IoniconName) =>
+  ({ color, size }: { color: ColorValue; size: number }) => (
+    <Ionicons name={name} color={color} size={size} />
+  );
 
 export default function RootLayout() {
   // DB（マイグレーション→シード）の準備が済むまで描画を待つ。
@@ -26,10 +41,28 @@ export default function RootLayout() {
     );
   }
 
-  // Midnight Ledger はダーク固定。
   return (
-    <ThemeProvider value={DarkTheme}>
-      <AppTabs />
-    </ThemeProvider>
+    <Tabs screenOptions={TAB_SCREEN_OPTIONS}>
+      <Tabs.Screen
+        name="index"
+        options={{ title: "ホーム", tabBarIcon: icon("home-outline") }}
+      />
+      <Tabs.Screen
+        name="expenses"
+        options={{ title: "支出", tabBarIcon: icon("receipt-outline") }}
+      />
+      <Tabs.Screen
+        name="subscriptions"
+        options={{ title: "サブスク", tabBarIcon: icon("repeat-outline") }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{ title: "カレンダー", tabBarIcon: icon("calendar-outline") }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{ title: "設定", tabBarIcon: icon("settings-outline") }}
+      />
+    </Tabs>
   );
 }
