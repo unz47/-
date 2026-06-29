@@ -1,5 +1,6 @@
 // レシートOCR の公開API（§11）。UI からはここだけ見る。
-// 撮影(VisionKitスキャナ) → OCR(Vision) → parse まで一気通貫。すべて端末内・外部送信なし。
+// 撮影(カメラ1枚) → 台形補正+OCR(Vision) → parse まで一気通貫。すべて端末内・外部送信なし。
+import * as ImagePicker from "expo-image-picker";
 import { Platform } from "react-native";
 
 import { VisionOcr } from "../../../modules/vision-ocr";
@@ -36,13 +37,22 @@ export type ScanOutcome =
   | { status: "unavailable" }
   | { status: "error"; message: string };
 
-/** レシートを撮影 → OCR → 解析。非対応環境では status:"unavailable"。 */
+/** レシートを撮影（1枚）→ 台形補正+OCR → 解析。非対応環境では status:"unavailable"。 */
 export async function scanReceipt(): Promise<ScanOutcome> {
   if (!ocrAvailable() || !VisionOcr) return { status: "unavailable" };
   try {
-    const scan = await VisionOcr.scanDocument();
-    if (scan?.canceled || !scan?.path) return { status: "canceled" };
-    const result = await VisionOcr.recognizeText(scan.path);
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      return { status: "error", message: "カメラの利用が許可されていません" };
+    }
+    const shot = await ImagePicker.launchCameraAsync({
+      quality: 0.9,
+      allowsEditing: false,
+      exif: false,
+    });
+    const uri = shot.assets?.[0]?.uri;
+    if (shot.canceled || !uri) return { status: "canceled" };
+    const result = await VisionOcr.recognizeText(uri);
     const caps = await VisionOcr.getCapabilities().catch(() => ({
       onDeviceLLM: false,
     }));

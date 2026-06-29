@@ -1,14 +1,11 @@
+import CoreImage
 import ExpoModulesCore
 import UIKit
 import Vision
-import VisionKit
 
 // 端末内レシートOCR（§11.9）。画像は一切外部送信しない。
-// JS → scanDocument(VisionKitスキャナ・台形補正) → recognizeText(Vision OCR) → JS。
+// 撮影は JS(expo-image-picker)で1枚 → recognizeText(自動台形補正 + Vision OCR) → JS。
 public class VisionOcrModule: Module {
-  // スキャン中のデリゲートを保持（VisionKit 完了まで解放させない）。
-  private var scannerDelegate: ScannerDelegate?
-
   public func definition() -> ModuleDefinition {
     Name("VisionOcr")
 
@@ -17,39 +14,14 @@ public class VisionOcrModule: Module {
       return ["onDeviceLLM": false]
     }
 
-    AsyncFunction("scanDocument") { (promise: Promise) in
-      guard VNDocumentCameraViewController.isSupported else {
-        promise.reject("E_UNSUPPORTED", "この端末はドキュメントスキャナに対応していません")
-        return
-      }
-      DispatchQueue.main.async {
-        guard let presenter = self.appContext?.utilities?.currentViewController() else {
-          promise.reject("E_NO_VC", "画面を表示できませんでした")
-          return
-        }
-        let delegate = ScannerDelegate { [weak self] result in
-          self?.scannerDelegate = nil
-          switch result {
-          case .canceled:
-            promise.resolve(["canceled": true])
-          case let .path(p):
-            promise.resolve(["path": p])
-          case let .error(code, message):
-            promise.reject(code, message)
-          }
-        }
-        self.scannerDelegate = delegate
-        let scanner = VNDocumentCameraViewController()
-        scanner.delegate = delegate
-        presenter.present(scanner, animated: true)
-      }
-    }
-
     AsyncFunction("recognizeText") { (path: String, promise: Promise) in
       guard let cgImage = loadCGImage(path) else {
         promise.reject("E_IMAGE", "画像を読み込めませんでした")
         return
       }
+      // 撮影画像に対し書類矩形を検出して台形補正（失敗時は原画像のまま）。
+      let target = correctDocumentPerspective(cgImage)
+
       let request = VNRecognizeTextRequest { request, error in
         if let error = error {
           promise.reject("E_OCR", error.localizedDescription)
@@ -77,7 +49,7 @@ public class VisionOcrModule: Module {
       request.usesLanguageCorrection = false
 
       DispatchQueue.global(qos: .userInitiated).async {
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        let handler = VNImageRequestHandler(cgImage: target, options: [:])
         do {
           try handler.perform([request])
         } catch {
@@ -98,56 +70,37 @@ private func loadCGImage(_ path: String) -> CGImage? {
   return nil
 }
 
-// MARK: - VisionKit ドキュメントスキャナ用デリゲート（NSObject 必須のため分離）
-private enum ScanResult {
-  case canceled
-  case path(String)
-  case error(String, String)
-}
+/// 撮影画像から書類の矩形を検出し、台形補正した画像を返す。検出/補正に失敗したら原画像。
+private func correctDocumentPerspective(_ cgImage: CGImage) -> CGImage {
+  let ciImage = CIImage(cgImage: cgImage)
+  let width = ciImage.extent.width
+  let height = ciImage.extent.height
 
-private class ScannerDelegate: NSObject, VNDocumentCameraViewControllerDelegate {
-  private let completion: (ScanResult) -> Void
-
-  init(completion: @escaping (ScanResult) -> Void) {
-    self.completion = completion
+  let request = VNDetectDocumentSegmentationRequest()
+  let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+  do {
+    try handler.perform([request])
+  } catch {
+    return cgImage
+  }
+  guard let obs = (request.results as? [VNRectangleObservation])?.first else {
+    return cgImage
   }
 
-  func documentCameraViewController(
-    _ controller: VNDocumentCameraViewController,
-    didFinishWith scan: VNDocumentCameraScan
-  ) {
-    controller.dismiss(animated: true)
-    guard scan.pageCount > 0 else {
-      completion(.canceled)
-      return
-    }
-    let image = scan.imageOfPage(at: 0)
-    guard let data = image.jpegData(compressionQuality: 0.9) else {
-      completion(.error("E_CONVERT", "スキャン画像の変換に失敗しました"))
-      return
-    }
-    let url = FileManager.default.temporaryDirectory
-      .appendingPathComponent("receipt-scan-\(UUID().uuidString).jpg")
-    do {
-      try data.write(to: url)
-      completion(.path(url.path))
-    } catch {
-      completion(.error("E_WRITE", error.localizedDescription))
-    }
+  // 正規化座標（原点左下）→ ピクセル座標へ。
+  func vec(_ p: CGPoint) -> CIVector {
+    return CIVector(x: p.x * width, y: p.y * height)
   }
+  guard let filter = CIFilter(name: "CIPerspectiveCorrection") else {
+    return cgImage
+  }
+  filter.setValue(ciImage, forKey: kCIInputImageKey)
+  filter.setValue(vec(obs.topLeft), forKey: "inputTopLeft")
+  filter.setValue(vec(obs.topRight), forKey: "inputTopRight")
+  filter.setValue(vec(obs.bottomLeft), forKey: "inputBottomLeft")
+  filter.setValue(vec(obs.bottomRight), forKey: "inputBottomRight")
 
-  func documentCameraViewControllerDidCancel(
-    _ controller: VNDocumentCameraViewController
-  ) {
-    controller.dismiss(animated: true)
-    completion(.canceled)
-  }
-
-  func documentCameraViewController(
-    _ controller: VNDocumentCameraViewController,
-    didFailWithError error: Error
-  ) {
-    controller.dismiss(animated: true)
-    completion(.error("E_SCAN", error.localizedDescription))
-  }
+  guard let output = filter.outputImage else { return cgImage }
+  let context = CIContext()
+  return context.createCGImage(output, from: output.extent) ?? cgImage
 }

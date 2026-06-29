@@ -14,9 +14,7 @@ export interface VisionOcrLine {
 export interface VisionOcrNativeModule {
   /** 端末内LLM（Foundation Models）対応可否。現状は false 固定。 */
   getCapabilities(): Promise<{ onDeviceLLM: boolean }>;
-  /** VisionKit ドキュメントスキャナで撮影し、補正済み画像のパスを返す（キャンセル時 canceled:true）。 */
-  scanDocument(): Promise<{ path?: string; canceled?: boolean }>;
-  /** 画像（パス）を Apple Vision で OCR。 */
+  /** 画像（パス）を自動台形補正 → Apple Vision で OCR。撮影は JS(expo-image-picker)側。 */
   recognizeText(path: string): Promise<{ lines: VisionOcrLine[] }>;
 }
 
