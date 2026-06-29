@@ -1,12 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { useColorScheme } from "nativewind";
-import { useEffect } from "react";
+import { colorScheme } from "nativewind";
 import { ActivityIndicator, type ColorValue, Text, View } from "react-native";
 
 import { useDatabaseReady } from "@/shared/db/use-database";
 import { useThemeColors } from "@/shared/config/theme";
 import "@/global.css";
+
+// ブランド既定はダーク（Midnight Ledger）。起動時に一度だけ設定し、以降の切替（設定タブ）は妨げない。
+// ※再レンダーで戻さないよう useEffect ではなくモジュール初回ロードで1回だけ実行する。
+// 永続化（再起動後も保持）は今後 settings テーブルへ。
+colorScheme.set("dark");
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 const icon =
@@ -16,13 +20,6 @@ const icon =
   );
 
 export default function RootLayout() {
-  const { setColorScheme } = useColorScheme();
-  // ブランド既定はダーク（Midnight Ledger）。切替は設定タブから。
-  // ※起動ごとにダークへ戻る（スキーマ設定の永続化は今後 settings テーブルに保存）。
-  useEffect(() => {
-    setColorScheme("dark");
-  }, [setColorScheme]);
-
   const colors = useThemeColors();
   // DB（マイグレーション→シード）の準備が済むまで描画を待つ。
   const { ready, error } = useDatabaseReady();
