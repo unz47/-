@@ -1,16 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { colorScheme } from "nativewind";
 import { ActivityIndicator, type ColorValue, Text, View } from "react-native";
 
 import { useDatabaseReady } from "@/shared/db/use-database";
 import { useThemeColors } from "@/shared/config/theme";
 import "@/global.css";
 
-// ブランド既定はダーク（Midnight Ledger）。起動時に一度だけ設定し、以降の切替（設定タブ）は妨げない。
-// ※再レンダーで戻さないよう useEffect ではなくモジュール初回ロードで1回だけ実行する。
-// 永続化（再起動後も保持）は今後 settings テーブルへ。
-colorScheme.set("dark");
+// テーマ既定はシステム追従（端末の外観に合わせる）。切替は設定タブから。
+// 強制設定はしない（再レンダーや Fast Refresh と競合してトグルを戻す不具合の原因になるため）。
+// 「選んだテーマを次回起動も保持」は今後 settings テーブルへ永続化して実現する。
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 const icon =
