@@ -1,7 +1,10 @@
-// サブスクの永続化（Drizzle）。読み取り中心（追加/解約は features 側で順次）。
+// サブスクの永続化（Drizzle）。
+import { eq } from "drizzle-orm";
+
 import { db } from "@/shared/db/client";
 import { subscriptions } from "@/shared/db/schema";
-import type { Subscription } from "@/shared/db/types";
+import type { BillingCycle, Subscription } from "@/shared/db/types";
+import { newId } from "@/shared/lib/id";
 
 type Row = typeof subscriptions.$inferSelect;
 
@@ -24,3 +27,63 @@ export function toSubscription(r: Row): Subscription {
 }
 
 export const subscriptionsQuery = db.select().from(subscriptions);
+
+export interface NewSubscriptionInput {
+  serviceName: string;
+  planName: string;
+  amount: number;
+  billingCycle: BillingCycle;
+  categoryId: string;
+  billingDay: number;
+  billingMonth?: number;
+  startedAt: string; // YYYY-MM-DD
+  presetId?: string;
+}
+
+export async function addSubscription(
+  input: NewSubscriptionInput,
+): Promise<void> {
+  await db.insert(subscriptions).values({
+    id: newId(),
+    serviceName: input.serviceName,
+    planName: input.planName,
+    amount: Math.round(input.amount),
+    billingCycle: input.billingCycle,
+    categoryId: input.categoryId,
+    billingDay: input.billingDay,
+    billingMonth: input.billingMonth ?? null,
+    startedAt: input.startedAt,
+    canceledAt: null,
+    presetId: input.presetId ?? null,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+/** 解約＝論理削除（canceledAt をセット。レコードは消さない）。§10 */
+export async function cancelSubscription(
+  id: string,
+  canceledAt: string,
+): Promise<void> {
+  await db
+    .update(subscriptions)
+    .set({ canceledAt })
+    .where(eq(subscriptions.id, id));
+}
+
+/**
+ * 再契約＝新しい契約レコードを作る（§10）。canceledAt クリアや startedAt 変更は
+ * 履歴破壊になるため、再契約日を startedAt とする別レコードにする。金額等は引き継ぐ。
+ */
+export async function reactivateSubscription(s: Subscription): Promise<void> {
+  await addSubscription({
+    serviceName: s.serviceName,
+    planName: s.planName,
+    amount: s.amount,
+    billingCycle: s.billingCycle,
+    categoryId: s.categoryId,
+    billingDay: s.billingDay,
+    billingMonth: s.billingMonth,
+    startedAt: new Date().toISOString().slice(0, 10),
+    presetId: s.presetId,
+  });
+}
