@@ -549,8 +549,9 @@ app/(expo-router routes・薄い)  src/{screens, features, entities, shared/{ui,
 - #9 編集フロー（支出/サブスク）+ 改定ログ（増額=danger/減額=success）
 
 ### 12.3 未了（多くは実機検証が必要）
-- **OCR ネイティブモジュール**（Capacitor の Swift を Expo ネイティブモジュールへ移植。
-  VNDocumentCameraViewController + Vision + 対応機 Foundation Models）。**要 dev build / 実機**。
+- ~~OCR ネイティブモジュール~~ → #10 で実装（`mobile/modules/vision-ocr`、Expoローカルモジュール。
+  VNDocumentCameraViewController + Vision、Capacitor版Swiftを移植）。**要 dev build（`expo run:ios`）で実機検証**。
+  対応機向け Foundation Models 抽出は未（getCapabilities は false 固定）。
 - **バックアップ/復元**（expo-file-system/sharing/document-picker。**要実機検証**）。
 - ~~支出/サブスクの編集フロー、改定ログ~~ → #9 で実装済み。
 - **テーマ設定の永続化**（再起動後も保持。settings テーブルへ保存）。
