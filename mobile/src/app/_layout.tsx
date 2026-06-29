@@ -1,17 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useColorScheme } from "nativewind";
+import { useEffect } from "react";
 import { ActivityIndicator, type ColorValue, Text, View } from "react-native";
 
 import { useDatabaseReady } from "@/shared/db/use-database";
+import { useThemeColors } from "@/shared/config/theme";
 import "@/global.css";
-
-// Midnight Ledger（PROJECT_PLAN §3）。タブバーは surface 面、アクティブは accent。
-const TAB_SCREEN_OPTIONS = {
-  headerShown: false,
-  tabBarStyle: { backgroundColor: "#151a23", borderTopColor: "#2a313d" },
-  tabBarActiveTintColor: "#2dd4bf",
-  tabBarInactiveTintColor: "#9ba4b4",
-} as const;
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 const icon =
@@ -21,6 +16,14 @@ const icon =
   );
 
 export default function RootLayout() {
+  const { setColorScheme } = useColorScheme();
+  // ブランド既定はダーク（Midnight Ledger）。切替は設定タブから。
+  // ※起動ごとにダークへ戻る（スキーマ設定の永続化は今後 settings テーブルに保存）。
+  useEffect(() => {
+    setColorScheme("dark");
+  }, [setColorScheme]);
+
+  const colors = useThemeColors();
   // DB（マイグレーション→シード）の準備が済むまで描画を待つ。
   const { ready, error } = useDatabaseReady();
 
@@ -36,13 +39,23 @@ export default function RootLayout() {
   if (!ready) {
     return (
       <View className="flex-1 items-center justify-center bg-base">
-        <ActivityIndicator color="#2dd4bf" />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
 
   return (
-    <Tabs screenOptions={TAB_SCREEN_OPTIONS}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+        },
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textSecondary,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{ title: "ホーム", tabBarIcon: icon("home-outline") }}

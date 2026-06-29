@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useCategoryMap } from "@/entities/category/model/use-categories";
 import { useExpenses } from "@/entities/expense/model/use-expenses";
 import { useSubscriptions } from "@/entities/subscription/model/use-subscriptions";
+import { useThemeColors } from "@/shared/config/theme";
 import { toMonthKey } from "@/shared/lib/aggregate";
 import { buildCalendarMonth, type CalendarDay } from "@/shared/lib/calendar";
 import { formatFullDay, formatMonthLabel } from "@/shared/lib/date";
@@ -22,6 +23,7 @@ export function CalendarScreen() {
   const catMap = useCategoryMap();
   const [cursor, setCursor] = useState(() => new Date());
   const [selected, setSelected] = useState<string | null>(null);
+  const colors = useThemeColors();
 
   const today = useMemo(() => new Date(), []);
   const month = useMemo(
@@ -41,7 +43,7 @@ export function CalendarScreen() {
             }}
             className="p-2"
           >
-            <Ionicons name="chevron-back" size={22} color="#9ba4b4" />
+            <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
           </Pressable>
           <View className="items-center">
             <Text className="text-base font-bold text-text-primary">
@@ -58,7 +60,7 @@ export function CalendarScreen() {
             }}
             className="p-2"
           >
-            <Ionicons name="chevron-forward" size={22} color="#9ba4b4" />
+            <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
           </Pressable>
         </View>
 

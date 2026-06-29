@@ -1,3 +1,56 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Midnight Ledger テーマ（PROJECT_PLAN §3）。セマンティックトークンを CSS 変数で定義し、
+ * ライト(:root) / ダーク(.dark) で値を差し替える。透明度修飾子（bg-accent/15 等）対応のため
+ * 値は "R G B" のチャンネル形式（tailwind.config 側で rgb(var(--x) / <alpha-value>)）。
+ * 生のカラーコードはここ以外に直書きしない（JS側の数少ない例外は shared/config/theme.ts に集約）。
+ */
+@layer base {
+  /* ライト（Daylight Ledger） */
+  :root {
+    --color-base: 237 240 244; /* #EDF0F4 ページ背景(薄グレー) */
+    --color-surface: 246 248 251; /* #F6F8FB 面 */
+    --color-surface-raised: 255 255 255; /* #FFFFFF カード/モーダル(最前) */
+    --color-border: 220 225 232; /* #DCE1E8 */
+
+    --color-text-primary: 27 35 48; /* #1B2330 */
+    --color-text-secondary: 88 96 113; /* #586071 */
+    --color-text-muted: 151 160 174; /* #97A0AE */
+
+    --color-accent: 13 148 136; /* #0D9488 teal-600（白地で視認性確保） */
+    --color-accent-dim: 15 118 110; /* #0F766E */
+    --color-accent-glow: 20 184 166; /* #14B8A6 */
+    --color-on-accent: 255 255 255; /* #FFFFFF アクセント面上の文字 */
+
+    --color-success: 5 150 105; /* #059669 減額・予算内 */
+    --color-danger: 220 38 38; /* #DC2626 増額・予算超過 専用 */
+    --color-warning: 217 119 6; /* #D97706 予算接近 */
+    --color-info: 37 99 235; /* #2563EB */
+  }
+
+  /* ダーク（Midnight Ledger・ブランド既定） */
+  .dark:root,
+  .dark {
+    --color-base: 11 14 20; /* #0B0E14 */
+    --color-surface: 21 26 35; /* #151A23 */
+    --color-surface-raised: 30 36 47; /* #1E242F */
+    --color-border: 42 49 61; /* #2A313D */
+
+    --color-text-primary: 230 234 240; /* #E6EAF0 */
+    --color-text-secondary: 155 164 180; /* #9BA4B4 */
+    --color-text-muted: 92 102 120; /* #5C6678 */
+
+    --color-accent: 45 212 191; /* #2DD4BF */
+    --color-accent-dim: 20 184 166; /* #14B8A6 */
+    --color-accent-glow: 94 234 212; /* #5EEAD4 */
+    --color-on-accent: 7 18 15; /* #07120F */
+
+    --color-success: 52 211 153; /* #34D399 */
+    --color-danger: 248 113 113; /* #F87171 */
+    --color-warning: 251 191 36; /* #FBBF24 */
+    --color-info: 96 165 250; /* #60A5FA */
+  }
+}

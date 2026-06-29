@@ -1,33 +1,36 @@
 /**
- * Midnight Ledger テーマ（PROJECT_PLAN §3）を NativeWind に移植。
- * 生のカラーコードはここ以外に直書きしない。Web版 globals.css の @theme と同値。
- * シグナル色: danger=増額/超過, success=減額/予算内（装飾に赤緑を使わない）。
+ * Midnight Ledger / Daylight Ledger テーマ（PROJECT_PLAN §3）。
+ * 実際の色値は src/global.css の CSS 変数（ライト :root / ダーク .dark）。ここでは名前→変数の対応だけ。
+ * rgb(var(--x) / <alpha-value>) 形式にして透明度修飾子（bg-accent/15 等）を効かせる。
  * @type {import('tailwindcss').Config}
  */
+const c = (name) => `rgb(var(--color-${name}) / <alpha-value>)`;
+
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
+  darkMode: "class", // colorScheme(dark/light) で .dark を切替
   theme: {
     extend: {
       colors: {
-        // 背景・面（base→surface→surface-raised の3層で奥行き）
-        base: "#0b0e14",
-        surface: { DEFAULT: "#151a23", raised: "#1e242f" },
-        border: "#2a313d",
-        // テキスト
+        base: c("base"),
+        surface: { DEFAULT: c("surface"), raised: c("surface-raised") },
+        border: c("border"),
         text: {
-          primary: "#e6eaf0",
-          secondary: "#9ba4b4",
-          muted: "#5c6678",
+          primary: c("text-primary"),
+          secondary: c("text-secondary"),
+          muted: c("text-muted"),
         },
-        // 主アクセント（teal）
-        accent: { DEFAULT: "#2dd4bf", dim: "#14b8a6", glow: "#5eead4" },
-        "on-accent": "#07120f",
-        // 機能色（シグナル：意味のあるときだけ）
-        success: "#34d399", // 減額・予算内
-        danger: "#f87171", // 増額・予算超過
-        warning: "#fbbf24", // 予算接近
-        info: "#60a5fa",
+        accent: {
+          DEFAULT: c("accent"),
+          dim: c("accent-dim"),
+          glow: c("accent-glow"),
+        },
+        "on-accent": c("on-accent"),
+        success: c("success"), // 減額・予算内
+        danger: c("danger"), // 増額・予算超過 専用
+        warning: c("warning"), // 予算接近
+        info: c("info"),
       },
     },
   },
