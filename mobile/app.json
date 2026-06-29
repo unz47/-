@@ -8,7 +8,10 @@
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSCameraUsageDescription": "レシートを撮影して金額・店名を読み取るために使います。画像は端末内で処理され、外部に送信されません。"
+      }
     },
     "android": {
       "adaptiveIcon": {

@@ -15,6 +15,7 @@ import {
   updateExpense,
 } from "@/entities/expense/model/expense-repo";
 import type { Expense } from "@/shared/db/types";
+import type { ReceiptPrefill } from "@/shared/ocr";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 
@@ -23,21 +24,24 @@ interface Props {
   onClose: () => void;
   /** 渡すと編集モード（プレフィル＋更新）。未指定なら新規追加。 */
   editing?: Expense;
+  /** レシートOCR の素案で新規フォームを埋める（編集モードでは無視）。 */
+  prefill?: ReceiptPrefill;
 }
 
-/** 支出の手入力フォーム（ボトムシート）。新規追加 / 編集の両対応。確認して保存。 */
-export function AddExpenseForm({ visible, onClose, editing }: Props) {
+/** 支出の手入力フォーム（ボトムシート）。新規追加 / 編集 / OCRプレフィルに対応。確認して保存。 */
+export function AddExpenseForm({ visible, onClose, editing, prefill }: Props) {
   const categories = useCategories();
-  const [amount, setAmount] = useState(() =>
-    editing ? String(editing.amount) : "",
-  );
+  const [amount, setAmount] = useState(() => {
+    const v = editing?.amount ?? prefill?.amount;
+    return v != null ? String(v) : "";
+  });
   const [categoryId, setCategoryId] = useState<string | null>(
     editing?.categoryId ?? null,
   );
   const [date, setDate] = useState(
-    () => editing?.date ?? format(new Date(), "yyyy-MM-dd"),
+    () => editing?.date ?? prefill?.date ?? format(new Date(), "yyyy-MM-dd"),
   );
-  const [memo, setMemo] = useState(editing?.memo ?? "");
+  const [memo, setMemo] = useState(editing?.memo ?? prefill?.memo ?? "");
 
   const amountNum = Number(amount.replace(/[^\d]/g, ""));
   const cat = categoryId ?? categories[0]?.id ?? null;
@@ -59,6 +63,10 @@ export function AddExpenseForm({ visible, onClose, editing }: Props) {
         amount: amountNum,
         categoryId: cat,
         memo: memo.trim() || undefined,
+        // OCR 由来の店名情報があれば一緒に保存（名寄せ集計用）。
+        merchant: prefill?.merchant,
+        merchantKey: prefill?.merchantKey,
+        occurredAt: prefill?.occurredAt,
       });
     }
     onClose();
@@ -74,8 +82,16 @@ export function AddExpenseForm({ visible, onClose, editing }: Props) {
       <View className="flex-1 justify-end bg-black/50">
         <View className="gap-4 rounded-t-3xl border-t border-border bg-surface p-5 pb-10">
           <Text className="text-lg font-bold text-text-primary">
-            {editing ? "支出を編集" : "支出を追加"}
+            {editing ? "支出を編集" : prefill ? "レシートから追加" : "支出を追加"}
           </Text>
+          {prefill &&
+            (prefill.uncertain.amount ||
+              prefill.uncertain.date ||
+              prefill.uncertain.merchant) && (
+              <Text className="text-xs text-warning">
+                ⚠ 読み取りに不確かな項目があります。確認して保存してください。
+              </Text>
+            )}
 
           <View className="gap-1">
             <Text className="text-xs text-text-secondary">金額</Text>

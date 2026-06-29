@@ -6,7 +6,9 @@ import { useCategoryMap } from "@/entities/category/model/use-categories";
 import { deleteExpense } from "@/entities/expense/model/expense-repo";
 import { useExpenses } from "@/entities/expense/model/use-expenses";
 import { AddExpenseForm } from "@/features/add-expense/add-expense-form";
+import { ReceiptScanButton } from "@/features/scan-receipt/receipt-scan-button";
 import type { Expense } from "@/shared/db/types";
+import type { ReceiptPrefill } from "@/shared/ocr";
 import { formatDayHeader } from "@/shared/lib/date";
 import { formatYen } from "@/shared/lib/money";
 
@@ -21,6 +23,8 @@ export function ExpensesScreen() {
   const catMap = useCategoryMap();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
+  const [prefill, setPrefill] = useState<ReceiptPrefill | null>(null);
+  const [scanSeq, setScanSeq] = useState(0);
 
   const sections = useMemo<Section[]>(() => {
     const byDate = new Map<string, Expense[]>();
@@ -48,6 +52,12 @@ export function ExpensesScreen() {
   function closeForm() {
     setAdding(false);
     setEditing(null);
+    setPrefill(null);
+  }
+  function onScanned(p: ReceiptPrefill) {
+    setEditing(null);
+    setPrefill(p);
+    setScanSeq((n) => n + 1);
   }
 
   return (
@@ -94,6 +104,8 @@ export function ExpensesScreen() {
         />
       )}
 
+      <ReceiptScanButton onScanned={onScanned} />
+
       <Pressable
         onPress={() => setAdding(true)}
         className="absolute bottom-8 right-6 h-14 w-14 items-center justify-center rounded-full bg-accent shadow-lg active:opacity-80"
@@ -102,9 +114,10 @@ export function ExpensesScreen() {
       </Pressable>
 
       <AddExpenseForm
-        key={editing?.id ?? "new"}
-        visible={adding || !!editing}
+        key={editing?.id ?? (prefill ? `prefill-${scanSeq}` : "new")}
+        visible={adding || !!editing || !!prefill}
         editing={editing ?? undefined}
+        prefill={prefill ?? undefined}
         onClose={closeForm}
       />
     </SafeAreaView>

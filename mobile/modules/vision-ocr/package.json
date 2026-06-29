@@ -1,0 +1,7 @@
+{
+  "name": "vision-ocr",
+  "version": "1.0.0",
+  "description": "端末内レシートOCR（Apple Vision + VisionKit）。外部送信なし。",
+  "main": "index.ts",
+  "private": true
+}
