@@ -77,6 +77,14 @@ pnpm build            # 本番ビルド（最終確認）
 
 ## 6. 現在地（セッション間で引き継ぐ）
 
+- **★React Native (Expo) 移行進行中（2026-06-29〜, ブランチ `rn-migration` / `mobile/`, PROJECT_PLAN §12）**。
+  ストア公開・速度重視で Capacitor(WebView)→RN へ。Web版(ルート)と並走中。構成=Bulletproof React
+  （`mobile/src/{screens,features,entities,shared}`）/ Expo SDK56 / expo-router / **NativeWind v4**(Midnight Ledger移植) /
+  **expo-sqlite+Drizzle**(useLiveQuery)。移植済み: 純ロジック(aggregate/date/presets/colors/ocr parse・merchant) /
+  データ層 / 支出CRUD / 5タブナビ / ダッシュボード実データ / サブスクCRUD / カレンダー / 設定（#1〜#7 コミット）。
+  **未了（要実機）**: OCRネイティブモジュール / バックアップ(ファイル) / 編集フロー・改定ログ / 全画面の実機目視 /
+  カットオーバー(mobile→ルート昇格・Web版削除)。検証は `cd mobile && pnpm exec tsc --noEmit` + `npx expo export --platform ios`。
+  **pnpm注意**: mobile は `--ignore-workspace` 必須（`mobile/.npmrc`）。以下はWeb版(v0.1, 出荷停止予定)の記録。
 - **Phase 1〜6 すべて完了（v0.1 スコープ達成）**。全フェーズの受け入れ条件を実ブラウザ E2E で検証済み。
   - 全 E2E: `pnpm e2e:{expenses,dashboard,subscriptions,changelog,settings}` + データ層 `pnpm check:db`（Playwright/Chromium）。
   - 完了ゲート: `pnpm verify`（tsc + eslint）/ `pnpm build` 緑。
