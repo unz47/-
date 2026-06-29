@@ -53,6 +53,26 @@ export async function addExpense(input: NewExpenseInput): Promise<void> {
   });
 }
 
+export interface UpdateExpenseInput {
+  id: string;
+  date: string;
+  amount: number;
+  categoryId: string;
+  memo?: string;
+}
+
+export async function updateExpense(input: UpdateExpenseInput): Promise<void> {
+  await db
+    .update(expenses)
+    .set({
+      date: input.date,
+      amount: Math.round(input.amount),
+      categoryId: input.categoryId,
+      memo: input.memo ?? null,
+    })
+    .where(eq(expenses.id, input.id));
+}
+
 export async function deleteExpense(id: string): Promise<void> {
   await db.delete(expenses).where(eq(expenses.id, id));
 }

@@ -59,6 +59,30 @@ export async function addSubscription(
   });
 }
 
+export interface UpdateSubscriptionInput {
+  id: string;
+  planName: string;
+  amount: number;
+  billingDay: number;
+}
+
+/**
+ * 契約内容の更新（行のみ）。改定ログの記録は features/edit-subscription が合成する
+ * （エンティティ間 import を避ける Bulletproof 規約）。
+ */
+export async function updateSubscription(
+  input: UpdateSubscriptionInput,
+): Promise<void> {
+  await db
+    .update(subscriptions)
+    .set({
+      planName: input.planName,
+      amount: Math.round(input.amount),
+      billingDay: input.billingDay,
+    })
+    .where(eq(subscriptions.id, input.id));
+}
+
 /** 解約＝論理削除（canceledAt をセット。レコードは消さない）。§10 */
 export async function cancelSubscription(
   id: string,

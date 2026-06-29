@@ -10,43 +10,57 @@ import {
 } from "react-native";
 
 import { useCategories } from "@/entities/category/model/use-categories";
-import { addExpense } from "@/entities/expense/model/expense-repo";
+import {
+  addExpense,
+  updateExpense,
+} from "@/entities/expense/model/expense-repo";
+import type { Expense } from "@/shared/db/types";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
+  /** 渡すと編集モード（プレフィル＋更新）。未指定なら新規追加。 */
+  editing?: Expense;
 }
 
-/** 支出の手入力フォーム（ボトムシート）。確認して保存。 */
-export function AddExpenseForm({ visible, onClose }: Props) {
+/** 支出の手入力フォーム（ボトムシート）。新規追加 / 編集の両対応。確認して保存。 */
+export function AddExpenseForm({ visible, onClose, editing }: Props) {
   const categories = useCategories();
-  const [amount, setAmount] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
-  const [memo, setMemo] = useState("");
+  const [amount, setAmount] = useState(() =>
+    editing ? String(editing.amount) : "",
+  );
+  const [categoryId, setCategoryId] = useState<string | null>(
+    editing?.categoryId ?? null,
+  );
+  const [date, setDate] = useState(
+    () => editing?.date ?? format(new Date(), "yyyy-MM-dd"),
+  );
+  const [memo, setMemo] = useState(editing?.memo ?? "");
 
   const amountNum = Number(amount.replace(/[^\d]/g, ""));
   const cat = categoryId ?? categories[0]?.id ?? null;
   const valid = amountNum > 0 && !!cat;
 
-  function reset() {
-    setAmount("");
-    setMemo("");
-    setCategoryId(null);
-    setDate(format(new Date(), "yyyy-MM-dd"));
-  }
-
   async function submit() {
     if (!valid || !cat) return;
-    await addExpense({
-      date,
-      amount: amountNum,
-      categoryId: cat,
-      memo: memo.trim() || undefined,
-    });
-    reset();
+    if (editing) {
+      await updateExpense({
+        id: editing.id,
+        date,
+        amount: amountNum,
+        categoryId: cat,
+        memo: memo.trim() || undefined,
+      });
+    } else {
+      await addExpense({
+        date,
+        amount: amountNum,
+        categoryId: cat,
+        memo: memo.trim() || undefined,
+      });
+    }
     onClose();
   }
 
@@ -59,7 +73,9 @@ export function AddExpenseForm({ visible, onClose }: Props) {
     >
       <View className="flex-1 justify-end bg-black/50">
         <View className="gap-4 rounded-t-3xl border-t border-border bg-surface p-5 pb-10">
-          <Text className="text-lg font-bold text-text-primary">支出を追加</Text>
+          <Text className="text-lg font-bold text-text-primary">
+            {editing ? "支出を編集" : "支出を追加"}
+          </Text>
 
           <View className="gap-1">
             <Text className="text-xs text-text-secondary">金額</Text>

@@ -8,20 +8,36 @@ import {
 } from "@/entities/subscription/model/subscription-repo";
 import { useSubscriptions } from "@/entities/subscription/model/use-subscriptions";
 import { AddSubscriptionForm } from "@/features/add-subscription/add-subscription-form";
+import { EditSubscriptionForm } from "@/features/edit-subscription/edit-subscription-form";
+import { ChangeLogSheet } from "@/features/subscription-logs/change-log-sheet";
 import { monthlyEquivalent } from "@/shared/lib/aggregate";
 import type { Subscription } from "@/shared/db/types";
 import { formatYen } from "@/shared/lib/money";
 import { Card } from "@/shared/ui/card";
 
-/** サブスク一覧（PROJECT_PLAN §6）。FAB で追加、長押しで解約/再契約。 */
+/** サブスク一覧（§6）。FABで追加、タップでアクション（編集/改定ログ/解約）。 */
 export function SubscriptionsScreen() {
   const subs = useSubscriptions();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Subscription | null>(null);
+  const [logsFor, setLogsFor] = useState<Subscription | null>(null);
 
   const active = subs.filter((s) => !s.canceledAt);
   const canceled = subs.filter((s) => s.canceledAt);
   const monthlyTotal = active.reduce((a, s) => a + monthlyEquivalent(s), 0);
 
+  function openActions(s: Subscription) {
+    Alert.alert(s.serviceName, undefined, [
+      { text: "編集", onPress: () => setEditing(s) },
+      { text: "改定ログ", onPress: () => setLogsFor(s) },
+      {
+        text: "解約",
+        style: "destructive",
+        onPress: () => confirmCancel(s),
+      },
+      { text: "閉じる", style: "cancel" },
+    ]);
+  }
   function confirmCancel(s: Subscription) {
     Alert.alert(s.serviceName, "このサブスクを解約しますか？", [
       { text: "閉じる", style: "cancel" },
@@ -53,7 +69,7 @@ export function SubscriptionsScreen() {
           </Card>
         ) : (
           active.map((s) => (
-            <Pressable key={s.id} onLongPress={() => confirmCancel(s)}>
+            <Pressable key={s.id} onPress={() => openActions(s)}>
               <Card className="flex-row items-center justify-between active:opacity-70">
                 <View>
                   <Text className="text-text-primary">{s.serviceName}</Text>
@@ -109,6 +125,22 @@ export function SubscriptionsScreen() {
       </Pressable>
 
       <AddSubscriptionForm visible={adding} onClose={() => setAdding(false)} />
+      {editing && (
+        <EditSubscriptionForm
+          key={editing.id}
+          visible
+          subscription={editing}
+          onClose={() => setEditing(null)}
+        />
+      )}
+      {logsFor && (
+        <ChangeLogSheet
+          key={logsFor.id}
+          visible
+          subscription={logsFor}
+          onClose={() => setLogsFor(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }

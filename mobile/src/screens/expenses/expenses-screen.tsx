@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, SectionList, Text, View } from "react-native";
+import { Alert, Pressable, SectionList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCategoryMap } from "@/entities/category/model/use-categories";
@@ -15,11 +15,12 @@ interface Section {
   data: Expense[];
 }
 
-/** 支出一覧（PROJECT_PLAN §6）。日付ごとに区切り、長押しで削除。FAB から追加。 */
+/** 支出一覧（PROJECT_PLAN §6）。日付区切り、タップで編集・長押しで削除、FAB で追加。 */
 export function ExpensesScreen() {
   const expenses = useExpenses();
   const catMap = useCategoryMap();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Expense | null>(null);
 
   const sections = useMemo<Section[]>(() => {
     const byDate = new Map<string, Expense[]>();
@@ -32,6 +33,22 @@ export function ExpensesScreen() {
       .sort((a, b) => (a[0] < b[0] ? 1 : -1))
       .map(([date, data]) => ({ date, data }));
   }, [expenses]);
+
+  function confirmDelete(e: Expense) {
+    Alert.alert(
+      catMap.get(e.categoryId)?.name ?? "支出",
+      `${formatYen(e.amount)} を削除しますか？`,
+      [
+        { text: "閉じる", style: "cancel" },
+        { text: "削除", style: "destructive", onPress: () => deleteExpense(e.id) },
+      ],
+    );
+  }
+
+  function closeForm() {
+    setAdding(false);
+    setEditing(null);
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-base" edges={["top"]}>
@@ -57,7 +74,8 @@ export function ExpensesScreen() {
           )}
           renderItem={({ item }) => (
             <Pressable
-              onLongPress={() => deleteExpense(item.id)}
+              onPress={() => setEditing(item)}
+              onLongPress={() => confirmDelete(item)}
               className="mb-2 flex-row items-center justify-between rounded-xl border border-border bg-surface-raised px-4 py-3 active:opacity-70"
             >
               <View className="gap-0.5">
@@ -83,7 +101,12 @@ export function ExpensesScreen() {
         <Text className="text-3xl leading-none text-on-accent">＋</Text>
       </Pressable>
 
-      <AddExpenseForm visible={adding} onClose={() => setAdding(false)} />
+      <AddExpenseForm
+        key={editing?.id ?? "new"}
+        visible={adding || !!editing}
+        editing={editing ?? undefined}
+        onClose={closeForm}
+      />
     </SafeAreaView>
   );
 }
