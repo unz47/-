@@ -6,8 +6,8 @@ import VisionKit
 // 端末内レシートOCR（§11.9）。画像は一切外部送信しない。
 // JS → scanDocument(VisionKitスキャナ・台形補正) → recognizeText(Vision OCR) → JS。
 public class VisionOcrModule: Module {
-  // scanDocument 中の保留 Promise（VisionKit デリゲート完了まで保持）。
-  private var pendingScan: Promise?
+  // スキャン中のデリゲートを保持（VisionKit 完了まで解放させない）。
+  private var scannerDelegate: ScannerDelegate?
 
   public func definition() -> ModuleDefinition {
     Name("VisionOcr")
@@ -27,15 +27,26 @@ public class VisionOcrModule: Module {
           promise.reject("E_NO_VC", "画面を表示できませんでした")
           return
         }
-        self.pendingScan = promise
+        let delegate = ScannerDelegate { [weak self] result in
+          self?.scannerDelegate = nil
+          switch result {
+          case .canceled:
+            promise.resolve(["canceled": true])
+          case let .path(p):
+            promise.resolve(["path": p])
+          case let .error(code, message):
+            promise.reject(code, message)
+          }
+        }
+        self.scannerDelegate = delegate
         let scanner = VNDocumentCameraViewController()
-        scanner.delegate = self
+        scanner.delegate = delegate
         presenter.present(scanner, animated: true)
       }
     }
 
     AsyncFunction("recognizeText") { (path: String, promise: Promise) in
-      guard let cgImage = Self.loadImage(path) else {
+      guard let cgImage = loadCGImage(path) else {
         promise.reject("E_IMAGE", "画像を読み込めませんでした")
         return
       }
@@ -75,62 +86,68 @@ public class VisionOcrModule: Module {
       }
     }
   }
-
-  private static func loadImage(_ path: String) -> CGImage? {
-    let url = path.hasPrefix("file://")
-      ? (URL(string: path) ?? URL(fileURLWithPath: path))
-      : URL(fileURLWithPath: path)
-    if let data = try? Data(contentsOf: url), let img = UIImage(data: data) {
-      return img.cgImage
-    }
-    return nil
-  }
 }
 
-// MARK: - VisionKit ドキュメントスキャナ（台形補正・コントラスト強調はOS側）
-extension VisionOcrModule: VNDocumentCameraViewControllerDelegate {
-  public func documentCameraViewController(
+private func loadCGImage(_ path: String) -> CGImage? {
+  let url = path.hasPrefix("file://")
+    ? (URL(string: path) ?? URL(fileURLWithPath: path))
+    : URL(fileURLWithPath: path)
+  if let data = try? Data(contentsOf: url), let img = UIImage(data: data) {
+    return img.cgImage
+  }
+  return nil
+}
+
+// MARK: - VisionKit ドキュメントスキャナ用デリゲート（NSObject 必須のため分離）
+private enum ScanResult {
+  case canceled
+  case path(String)
+  case error(String, String)
+}
+
+private class ScannerDelegate: NSObject, VNDocumentCameraViewControllerDelegate {
+  private let completion: (ScanResult) -> Void
+
+  init(completion: @escaping (ScanResult) -> Void) {
+    self.completion = completion
+  }
+
+  func documentCameraViewController(
     _ controller: VNDocumentCameraViewController,
     didFinishWith scan: VNDocumentCameraScan
   ) {
     controller.dismiss(animated: true)
-    let promise = pendingScan
-    pendingScan = nil
     guard scan.pageCount > 0 else {
-      promise?.resolve(["canceled": true])
+      completion(.canceled)
       return
     }
     let image = scan.imageOfPage(at: 0)
     guard let data = image.jpegData(compressionQuality: 0.9) else {
-      promise?.reject("E_CONVERT", "スキャン画像の変換に失敗しました")
+      completion(.error("E_CONVERT", "スキャン画像の変換に失敗しました"))
       return
     }
     let url = FileManager.default.temporaryDirectory
       .appendingPathComponent("receipt-scan-\(UUID().uuidString).jpg")
     do {
       try data.write(to: url)
-      promise?.resolve(["path": url.path])
+      completion(.path(url.path))
     } catch {
-      promise?.reject("E_WRITE", error.localizedDescription)
+      completion(.error("E_WRITE", error.localizedDescription))
     }
   }
 
-  public func documentCameraViewControllerDidCancel(
+  func documentCameraViewControllerDidCancel(
     _ controller: VNDocumentCameraViewController
   ) {
     controller.dismiss(animated: true)
-    let promise = pendingScan
-    pendingScan = nil
-    promise?.resolve(["canceled": true])
+    completion(.canceled)
   }
 
-  public func documentCameraViewController(
+  func documentCameraViewController(
     _ controller: VNDocumentCameraViewController,
     didFailWithError error: Error
   ) {
     controller.dismiss(animated: true)
-    let promise = pendingScan
-    pendingScan = nil
-    promise?.reject("E_SCAN", error.localizedDescription)
+    completion(.error("E_SCAN", error.localizedDescription))
   }
 }
