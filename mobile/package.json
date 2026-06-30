@@ -54,7 +54,9 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "sync:ios": "expo prebuild --platform ios",
-    "build": "tsc --noEmit && expo prebuild --platform ios"
+    "build": "tsc --noEmit && expo prebuild --platform ios",
+    "build:ios": "pnpm build && expo run:ios",
+    "build:ios:device": "pnpm build && expo run:ios --device"
   },
   "private": true
 }
