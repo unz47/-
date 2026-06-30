@@ -23,7 +23,6 @@ export interface ReceiptPrefill {
   merchant?: string;
   merchantKey?: string;
   occurredAt?: string;
-  address?: string;
   uncertain: { amount: boolean; date: boolean; merchant: boolean };
 }
 
@@ -77,7 +76,6 @@ export function toPrefill(r: ParsedReceipt): ReceiptPrefill {
     merchant: r.merchant,
     merchantKey: merchantKey(r.merchant),
     occurredAt: r.occurredAt,
-    address: r.address,
     uncertain: {
       amount: r.amount == null || (r.amountConfidence ?? 0) < LOW_CONFIDENCE,
       date: r.occurredAt == null || (r.dateConfidence ?? 0) < LOW_CONFIDENCE,

@@ -42,9 +42,6 @@ export function AddExpenseForm({ visible, onClose, editing, prefill }: Props) {
     () => editing?.date ?? prefill?.date ?? format(new Date(), "yyyy-MM-dd"),
   );
   const [memo, setMemo] = useState(editing?.memo ?? prefill?.memo ?? "");
-  const [address, setAddress] = useState(
-    editing?.address ?? prefill?.address ?? "",
-  );
 
   const amountNum = Number(amount.replace(/[^\d]/g, ""));
   const cat = categoryId ?? categories[0]?.id ?? null;
@@ -59,7 +56,6 @@ export function AddExpenseForm({ visible, onClose, editing, prefill }: Props) {
         amount: amountNum,
         categoryId: cat,
         memo: memo.trim() || undefined,
-        address: address.trim() || undefined,
       });
     } else {
       await addExpense({
@@ -67,7 +63,6 @@ export function AddExpenseForm({ visible, onClose, editing, prefill }: Props) {
         amount: amountNum,
         categoryId: cat,
         memo: memo.trim() || undefined,
-        address: address.trim() || undefined,
         // OCR 由来の店名情報があれば一緒に保存（名寄せ集計用）。
         merchant: prefill?.merchant,
         merchantKey: prefill?.merchantKey,
@@ -161,18 +156,6 @@ export function AddExpenseForm({ visible, onClose, editing, prefill }: Props) {
               value={memo}
               onChangeText={setMemo}
               placeholderTextColor="#5c6678"
-              className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-text-primary"
-            />
-          </View>
-
-          <View className="gap-1">
-            <Text className="text-xs text-text-secondary">住所（任意）</Text>
-            <TextInput
-              value={address}
-              onChangeText={setAddress}
-              placeholder="レシートの店舗住所"
-              placeholderTextColor="#5c6678"
-              multiline
               className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-text-primary"
             />
           </View>
