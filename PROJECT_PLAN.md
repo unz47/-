@@ -547,16 +547,27 @@ app/(expo-router routes・薄い)  src/{screens, features, entities, shared/{ui,
 - #7 設定（件数・カテゴリ・全削除）
 - #8 ライト/ダーク両対応のテーマ基盤（Daylight + Midnight Ledger、CSS変数化、設定で切替）
 - #9 編集フロー（支出/サブスク）+ 改定ログ（増額=danger/減額=success）
+- #10 OCR（Expoローカルネイティブモジュール VisionOcr）
+- #11 OCR撮影を単写真+自動台形補正に（1枚→確認画面）
+- #12 レシートから住所も抽出・保存（db migration 0001 で address 列）
+- #13 バックアップ/復元（JSONエクスポート・インポート）
 
 ### 12.3 未了（多くは実機検証が必要）
 - ~~OCR ネイティブモジュール~~ → #10 で実装（`mobile/modules/vision-ocr`、Expoローカルモジュール。
   VNDocumentCameraViewController + Vision、Capacitor版Swiftを移植）。**要 dev build（`expo run:ios`）で実機検証**。
   対応機向け Foundation Models 抽出は未（getCapabilities は false 固定）。
-- **バックアップ/復元**（expo-file-system/sharing/document-picker。**要実機検証**）。
+- ~~バックアップ/復元~~ → #13 で実装（expo-file-system/sharing/document-picker）。**要実機検証**。
 - ~~支出/サブスクの編集フロー、改定ログ~~ → #9 で実装済み。
+- **OCR の実機検証**（#10〜#12: 撮影→台形補正→金額/店名/住所抽出。Swiftは未コンパイル検証部分あり）。
 - **テーマ設定の永続化**（再起動後も保持。settings テーブルへ保存）。
+- **対応機向け Foundation Models 抽出**（getCapabilities は false 固定）。
 - **全画面の実機目視**（NativeWind描画・SQLite動作はバンドル検証のみ＝実機未確認）。
 - **カットオーバー**: mobile/ をルート昇格 → Web版削除（feature parity 到達後・ユーザー同席で）。
+
+### 12.5 機能パリティ状況（2026-06-30）
+v0.1 Web版の全機能を RN へ移植完了（#1〜#13）。ダッシュボード/支出CRUD/サブスクCRUD・解約再契約/
+改定ログ/カレンダー/設定/テーマ/バックアップ/**OCR（金額・店名・住所・日時）**。
+残りは実機検証・永続化・LLM抽出・カットオーバー。
 
 ### 12.4 実機での動かし方
 更新版 Expo Go で `cd mobile && pnpm start`（OCR等カスタムネイティブ前は可）、
