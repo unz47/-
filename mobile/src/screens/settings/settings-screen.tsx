@@ -1,10 +1,15 @@
 import { useColorScheme } from "nativewind";
+import { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCategories } from "@/entities/category/model/use-categories";
 import { useExpenses } from "@/entities/expense/model/use-expenses";
 import { useSubscriptions } from "@/entities/subscription/model/use-subscriptions";
+import {
+  exportBackup,
+  importBackup,
+} from "@/features/backup-restore/backup-restore";
 import { clearAllData } from "@/shared/db/maintenance";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
@@ -22,6 +27,41 @@ export function SettingsScreen() {
   const subs = useSubscriptions();
   const cats = useCategories();
   const { colorScheme, setColorScheme } = useColorScheme();
+  const [busy, setBusy] = useState(false);
+
+  async function onExport() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await exportBackup();
+    } catch (e) {
+      Alert.alert("エクスポート失敗", e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onImport() {
+    Alert.alert(
+      "バックアップから復元",
+      "現在のデータはすべて置き換えられます。続けますか？",
+      [
+        { text: "閉じる", style: "cancel" },
+        {
+          text: "ファイルを選ぶ",
+          onPress: async () => {
+            if (busy) return;
+            setBusy(true);
+            const r = await importBackup();
+            setBusy(false);
+            if (r.status === "ok") Alert.alert("完了", "復元しました。");
+            else if (r.status === "error")
+              Alert.alert("復元失敗", r.message);
+          },
+        },
+      ],
+    );
+  }
 
   function confirmClear() {
     // 赤(danger)は値上げ専用のため、破壊操作でもテーマの赤は使わない（§3）。
@@ -96,10 +136,29 @@ export function SettingsScreen() {
           ))}
         </Card>
 
-        <Card>
-          <Text className="text-xs text-text-muted">
-            バックアップ（エクスポート/インポート）は実機検証フェーズで追加予定。
+        <Card className="gap-3">
+          <Text className="text-sm font-semibold text-text-secondary">
+            バックアップ
           </Text>
+          <Text className="text-xs text-text-muted">
+            全データを JSON で書き出し / 復元します（端末内のみ・外部送信なし）。
+          </Text>
+          <View className="flex-row gap-3">
+            <Button
+              label="エクスポート"
+              variant="ghost"
+              onPress={onExport}
+              disabled={busy}
+              className="flex-1"
+            />
+            <Button
+              label="インポート"
+              variant="ghost"
+              onPress={onImport}
+              disabled={busy}
+              className="flex-1"
+            />
+          </View>
         </Card>
 
         <Button label="全データ削除" variant="ghost" onPress={confirmClear} />
