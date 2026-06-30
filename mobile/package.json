@@ -51,7 +51,10 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "sync:ios": "expo prebuild --platform ios",
+    "build": "tsc --noEmit && expo prebuild --platform ios"
   },
   "private": true
 }
