@@ -1,6 +1,12 @@
 // SQLite スキーマ（Drizzle）。ドメイン型（types.ts）と対応。Web版 Dexie db.ts の移行先。
 // 不変条件: 金額は円・整数（amount は integer）。日付は文字列（ISO / YYYY-MM-DD）で保持。
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  real,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core";
 
 export const categories = sqliteTable("categories", {
   id: text("id").primaryKey(),
@@ -24,7 +30,10 @@ export const expenses = sqliteTable(
     merchant: text("merchant"),
     merchantKey: text("merchant_key"),
     occurredAt: text("occurred_at"),
+    // 店の位置（§11.5 C）。lat/lng が真実（ジオフェンス用）、address は逆ジオの表示キャッシュ。
     address: text("address"),
+    lat: real("lat"),
+    lng: real("lng"),
   },
   (t) => ({
     dateIdx: index("expenses_date_idx").on(t.date),

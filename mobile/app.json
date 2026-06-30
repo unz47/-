@@ -12,6 +12,7 @@
       "bundleIdentifier": "com.unz47.expensetracker",
       "infoPlist": {
         "NSCameraUsageDescription": "レシートを撮影して金額・店名を読み取るために使います。画像は端末内で処理され、外部に送信されません。",
+        "NSLocationWhenInUseUsageDescription": "店の位置を地図で確認・登録するために使います。",
         "CFBundleDevelopmentRegion": "ja",
         "CFBundleLocalizations": ["ja", "en"],
         "CFBundleAllowMixedLocalizations": true

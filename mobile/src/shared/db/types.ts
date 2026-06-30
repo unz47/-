@@ -14,8 +14,10 @@ export interface Expense {
   merchantKey?: string;
   // 実際の購入日時（ISO）。OCR由来。date（家計簿上の日付）とは別物。
   occurredAt?: string;
-  // レシート印字の店舗住所（OCR由来・任意）。将来の位置アラート（§11.5 C）の種にもなる。
+  // 店の位置（§11.5 C）。lat/lng が真実（ジオフェンス用）、address は逆ジオの表示キャッシュ。
   address?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface Category {

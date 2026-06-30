@@ -21,6 +21,8 @@ export function toExpense(r: Row): Expense {
     merchantKey: r.merchantKey ?? undefined,
     occurredAt: r.occurredAt ?? undefined,
     address: r.address ?? undefined,
+    lat: r.lat ?? undefined,
+    lng: r.lng ?? undefined,
   };
 }
 
@@ -33,6 +35,8 @@ export interface NewExpenseInput {
   merchantKey?: string;
   occurredAt?: string;
   address?: string;
+  lat?: number;
+  lng?: number;
 }
 
 /** 日付降順の支出一覧（リアクティブ取得は use-expenses 側）。 */
@@ -52,8 +56,41 @@ export async function addExpense(input: NewExpenseInput): Promise<void> {
     merchantKey: input.merchantKey ?? null,
     occurredAt: input.occurredAt ?? null,
     address: input.address ?? null,
+    lat: input.lat ?? null,
+    lng: input.lng ?? null,
     createdAt: new Date().toISOString(),
   });
+}
+
+export interface ExpenseLocation {
+  lat: number;
+  lng: number;
+  address?: string;
+}
+
+/** 単一支出に店の位置を設定（§11.5 C）。 */
+export async function setExpenseLocation(
+  id: string,
+  loc: ExpenseLocation,
+): Promise<void> {
+  await db
+    .update(expenses)
+    .set({ lat: loc.lat, lng: loc.lng, address: loc.address ?? null })
+    .where(eq(expenses.id, id));
+}
+
+/**
+ * 同じ merchantKey の支出すべてに位置を反映（「一度登録すれば次回から」）。
+ * 店ごとに一度ピンを置けば、その店の過去・未来の記録に座標が行き渡る。
+ */
+export async function setMerchantLocation(
+  merchantKey: string,
+  loc: ExpenseLocation,
+): Promise<void> {
+  await db
+    .update(expenses)
+    .set({ lat: loc.lat, lng: loc.lng, address: loc.address ?? null })
+    .where(eq(expenses.merchantKey, merchantKey));
 }
 
 export interface UpdateExpenseInput {
