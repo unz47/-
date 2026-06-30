@@ -8,7 +8,7 @@ import { useExpenses } from "@/entities/expense/model/use-expenses";
 import { AddExpenseForm } from "@/features/add-expense/add-expense-form";
 import { ReceiptScanButton } from "@/features/scan-receipt/receipt-scan-button";
 import type { Expense } from "@/shared/db/types";
-import type { ReceiptPrefill } from "@/shared/ocr";
+import { scanReceipt, toPrefill, type ReceiptPrefill } from "@/shared/ocr";
 import { formatDayHeader } from "@/shared/lib/date";
 import { formatYen } from "@/shared/lib/money";
 
@@ -58,6 +58,16 @@ export function ExpensesScreen() {
     setEditing(null);
     setPrefill(p);
     setScanSeq((n) => n + 1);
+  }
+  // 確認フォームからの「撮り直し」: 再スキャンして prefill を差し替える（キャンセルは現状維持）。
+  async function rescan() {
+    const out = await scanReceipt();
+    if (out.status === "ok") {
+      setPrefill(toPrefill(out.receipt));
+      setScanSeq((n) => n + 1);
+    } else if (out.status === "error") {
+      Alert.alert("読み取り失敗", out.message);
+    }
   }
 
   return (
@@ -118,6 +128,7 @@ export function ExpensesScreen() {
         visible={adding || !!editing || !!prefill}
         editing={editing ?? undefined}
         prefill={prefill ?? undefined}
+        onRescan={prefill ? rescan : undefined}
         onClose={closeForm}
       />
     </SafeAreaView>

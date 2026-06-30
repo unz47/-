@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { useState } from "react";
 import {
@@ -26,10 +27,18 @@ interface Props {
   editing?: Expense;
   /** レシートOCR の素案で新規フォームを埋める（編集モードでは無視）。 */
   prefill?: ReceiptPrefill;
+  /** OCR確認時の「撮り直し」。渡されたときだけヘッダにボタンを出す。 */
+  onRescan?: () => void;
 }
 
 /** 支出の手入力フォーム（ボトムシート）。新規追加 / 編集 / OCRプレフィルに対応。確認して保存。 */
-export function AddExpenseForm({ visible, onClose, editing, prefill }: Props) {
+export function AddExpenseForm({
+  visible,
+  onClose,
+  editing,
+  prefill,
+  onRescan,
+}: Props) {
   const categories = useCategories();
   const [amount, setAmount] = useState(() => {
     const v = editing?.amount ?? prefill?.amount;
@@ -81,9 +90,20 @@ export function AddExpenseForm({ visible, onClose, editing, prefill }: Props) {
     >
       <View className="flex-1 justify-end bg-black/50">
         <View className="gap-4 rounded-t-3xl border-t border-border bg-surface p-5 pb-10">
-          <Text className="text-lg font-bold text-text-primary">
-            {editing ? "支出を編集" : prefill ? "レシートから追加" : "支出を追加"}
-          </Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-text-primary">
+              {editing ? "支出を編集" : prefill ? "レシートから追加" : "支出を追加"}
+            </Text>
+            {onRescan && (
+              <Pressable
+                onPress={onRescan}
+                className="flex-row items-center gap-1 rounded-full border border-border bg-surface-raised px-3 py-1.5 active:opacity-70"
+              >
+                <Ionicons name="camera-reverse-outline" size={16} color="#2dd4bf" />
+                <Text className="text-xs text-accent">撮り直し</Text>
+              </Pressable>
+            )}
+          </View>
           {prefill &&
             (prefill.uncertain.amount ||
               prefill.uncertain.date ||
