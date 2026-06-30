@@ -20,6 +20,7 @@ export function toExpense(r: Row): Expense {
     merchant: r.merchant ?? undefined,
     merchantKey: r.merchantKey ?? undefined,
     occurredAt: r.occurredAt ?? undefined,
+    address: r.address ?? undefined,
   };
 }
 
@@ -31,6 +32,7 @@ export interface NewExpenseInput {
   merchant?: string;
   merchantKey?: string;
   occurredAt?: string;
+  address?: string;
 }
 
 /** 日付降順の支出一覧（リアクティブ取得は use-expenses 側）。 */
@@ -49,6 +51,7 @@ export async function addExpense(input: NewExpenseInput): Promise<void> {
     merchant: input.merchant ?? null,
     merchantKey: input.merchantKey ?? null,
     occurredAt: input.occurredAt ?? null,
+    address: input.address ?? null,
     createdAt: new Date().toISOString(),
   });
 }
@@ -59,6 +62,7 @@ export interface UpdateExpenseInput {
   amount: number;
   categoryId: string;
   memo?: string;
+  address?: string;
 }
 
 export async function updateExpense(input: UpdateExpenseInput): Promise<void> {
@@ -69,6 +73,7 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<void> {
       amount: Math.round(input.amount),
       categoryId: input.categoryId,
       memo: input.memo ?? null,
+      address: input.address ?? null,
     })
     .where(eq(expenses.id, input.id));
 }

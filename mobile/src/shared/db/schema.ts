@@ -24,6 +24,7 @@ export const expenses = sqliteTable(
     merchant: text("merchant"),
     merchantKey: text("merchant_key"),
     occurredAt: text("occurred_at"),
+    address: text("address"),
   },
   (t) => ({
     dateIdx: index("expenses_date_idx").on(t.date),

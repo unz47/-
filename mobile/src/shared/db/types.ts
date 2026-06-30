@@ -14,6 +14,8 @@ export interface Expense {
   merchantKey?: string;
   // 実際の購入日時（ISO）。OCR由来。date（家計簿上の日付）とは別物。
   occurredAt?: string;
+  // レシート印字の店舗住所（OCR由来・任意）。将来の位置アラート（§11.5 C）の種にもなる。
+  address?: string;
 }
 
 export interface Category {

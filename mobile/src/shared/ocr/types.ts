@@ -27,6 +27,8 @@ export interface ParsedReceipt {
   merchantConfidence?: number;
   occurredAt?: string; // 購入日時 ISO（時刻が取れなければ日付のみ）
   dateConfidence?: number;
+  address?: string; // レシート印字の店舗住所
+  addressConfidence?: number;
   /** デバッグ/確認用に、認識した全行（上→下）。 */
   rawLines: string[];
 }

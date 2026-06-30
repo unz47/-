@@ -27,6 +27,10 @@ const STORE_BLOCKLIST = [
 
 const DATE_RE = /(20\d{2})[年/.\-]\s*(\d{1,2})[月/.\-]\s*(\d{1,2})/;
 const TIME_RE = /(\d{1,2}):(\d{2})/;
+// 住所の手がかり: 郵便番号 / 都道府県。レシート上部に店舗住所が印字される。
+const POSTAL_RE = /〒?\s*\d{3}-?\d{4}/;
+const PREF_RE = /(東京都|北海道|京都府|大阪府|.{2,3}県)/;
+const TEL_RE = /(TEL|tel|電話|☎)/;
 /** 同じ視覚行とみなす y 距離のしきい値（正規化座標）。 */
 const SAME_ROW_DY = 0.02;
 
@@ -138,6 +142,31 @@ export function parseReceipt(result: OcrResult): ParsedReceipt {
     merchantConfidence = store.confidence;
   }
 
+  // --- 住所（郵便番号 or 都道府県を含む行。続く番地行があれば結合）---
+  let address: string | undefined;
+  let addressConfidence: number | undefined;
+  const addrIdx = lines.findIndex(
+    (l) =>
+      (POSTAL_RE.test(l.text) || PREF_RE.test(l.text)) &&
+      !TEL_RE.test(l.text) &&
+      yenOf(l.text) === null,
+  );
+  if (addrIdx >= 0) {
+    const head = lines[addrIdx];
+    const next = lines[addrIdx + 1];
+    // 続く行が番地っぽく（数字-数字 や 丁目/番地/号）、電話/金額/日付でなければ結合。
+    const looksLikeAddrTail =
+      next &&
+      /(\d+[-－]\d+|丁目|番地|[0-9]+号)/.test(next.text) &&
+      !TEL_RE.test(next.text) &&
+      yenOf(next.text) === null &&
+      !isDateOrTimeLine(next.text);
+    address = (looksLikeAddrTail ? `${head.text} ${next!.text}` : head.text)
+      .replace(/\s+/g, " ")
+      .trim();
+    addressConfidence = head.confidence;
+  }
+
   return {
     amount,
     amountConfidence,
@@ -145,6 +174,8 @@ export function parseReceipt(result: OcrResult): ParsedReceipt {
     merchantConfidence,
     occurredAt,
     dateConfidence,
+    address,
+    addressConfidence,
     rawLines: texts,
   };
 }
