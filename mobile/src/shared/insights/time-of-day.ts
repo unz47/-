@@ -90,7 +90,10 @@ export function buildTimeOfDayInsight(
 
   for (const e of expenses) {
     if (e.date < lower || e.date > upper) continue;
-    if (!e.occurredAt) {
+    // occurredAt が時刻成分（"...T HH:MM:SS"）を持つものだけ時間帯に振り分ける。
+    // 日付だけ（"YYYY-MM-DD"、時刻が読めなかったレシート）は parseISO で 0 時＝深夜に
+    // 誤集計されるため、時刻不明として扱う（parse.ts の occurredAt 生成規則と対応）。
+    if (!e.occurredAt || !e.occurredAt.includes("T")) {
       countWithoutTime += 1;
       continue;
     }
