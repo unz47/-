@@ -43,6 +43,7 @@
           }
         }
       ],
+      "./plugins/withoutApsEnvironment",
       "expo-notifications"
     ],
     "experiments": {
