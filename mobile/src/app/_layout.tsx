@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useEffect } from "react";
 import { ActivityIndicator, type ColorValue, Text, View } from "react-native";
 
 import { useDatabaseReady } from "@/shared/db/use-database";
+import { configureNotificationHandler } from "@/shared/notifications/weekly-insight";
 import { useThemeColors } from "@/shared/config/theme";
 import "@/global.css";
 
@@ -21,6 +23,11 @@ export default function RootLayout() {
   const colors = useThemeColors();
   // DB（マイグレーション→シード）の準備が済むまで描画を待つ。
   const { ready, error } = useDatabaseReady();
+
+  // 通知をフォアグラウンドでも表示できるようハンドラを一度だけ設定する。
+  useEffect(() => {
+    configureNotificationHandler();
+  }, []);
 
   if (error) {
     return (

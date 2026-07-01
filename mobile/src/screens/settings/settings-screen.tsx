@@ -1,6 +1,6 @@
 import { useColorScheme } from "nativewind";
-import { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCategories } from "@/entities/category/model/use-categories";
@@ -10,8 +10,14 @@ import {
   exportBackup,
   importBackup,
 } from "@/features/backup-restore/backup-restore";
+import { useThemeColors } from "@/shared/config/theme";
 import { clearAllData } from "@/shared/db/maintenance";
 import { cn } from "@/shared/lib/cn";
+import {
+  disableWeeklyInsight,
+  enableWeeklyInsight,
+  isWeeklyInsightEnabled,
+} from "@/shared/notifications/weekly-insight";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 
@@ -27,7 +33,36 @@ export function SettingsScreen() {
   const subs = useSubscriptions();
   const cats = useCategories();
   const { colorScheme, setColorScheme } = useColorScheme();
+  const colors = useThemeColors();
   const [busy, setBusy] = useState(false);
+  const [notifyOn, setNotifyOn] = useState(false);
+
+  useEffect(() => {
+    isWeeklyInsightEnabled().then(setNotifyOn);
+  }, []);
+
+  async function toggleNotify() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (notifyOn) {
+        await disableWeeklyInsight();
+        setNotifyOn(false);
+      } else {
+        const r = await enableWeeklyInsight();
+        if (r === "denied") {
+          Alert.alert(
+            "通知が許可されていません",
+            "端末の設定アプリから、このアプリの通知を許可してください。",
+          );
+        } else {
+          setNotifyOn(true);
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onExport() {
     if (busy) return;
@@ -134,6 +169,26 @@ export function SettingsScreen() {
               <Text className="text-sm text-text-primary">{c.name}</Text>
             </View>
           ))}
+        </Card>
+
+        <Card className="gap-2">
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="flex-1 gap-0.5">
+              <Text className="text-sm font-semibold text-text-secondary">
+                週次の振り返り通知
+              </Text>
+              <Text className="text-xs text-text-muted">
+                毎週日曜 20:00 に、使いがちな時間帯のチェックを促します（端末内のみ・外部送信なし）。
+              </Text>
+            </View>
+            <Switch
+              value={notifyOn}
+              onValueChange={toggleNotify}
+              disabled={busy}
+              trackColor={{ true: colors.accent, false: colors.border }}
+              thumbColor={colors.surfaceRaised}
+            />
+          </View>
         </Card>
 
         <Card className="gap-3">

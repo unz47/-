@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useCategoryMap } from "@/entities/category/model/use-categories";
 import { useExpenses } from "@/entities/expense/model/use-expenses";
 import { useSubscriptions } from "@/entities/subscription/model/use-subscriptions";
+import { TimeOfDaySection } from "@/features/insights/time-of-day-section";
 import {
   categoryBreakdown,
   monthSummary,
@@ -88,6 +89,8 @@ export function DashboardScreen() {
             </Card>
           )}
         </View>
+
+        <TimeOfDaySection expenses={expenses} />
       </ScrollView>
     </SafeAreaView>
   );

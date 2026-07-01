@@ -82,7 +82,12 @@ pnpm build            # 本番ビルド（最終確認）
   （`mobile/src/{screens,features,entities,shared}`）/ Expo SDK56 / expo-router / **NativeWind v4**(Midnight Ledger移植) /
   **expo-sqlite+Drizzle**(useLiveQuery)。移植済み: 純ロジック(aggregate/date/presets/colors/ocr parse・merchant) /
   データ層 / 支出CRUD / 5タブナビ / ダッシュボード実データ / サブスクCRUD / カレンダー / 設定（#1〜#7 コミット）。
-  **未了（要実機）**: OCRネイティブモジュール / バックアップ(ファイル) / 編集フロー・改定ログ / 全画面の実機目視 /
+  **時間帯インサイト＋週次通知（2026-07-01, PROJECT_PLAN §11.5 D）**: 位置(座標)の接近ナッジは「店名→座標」の自動確定が
+  技術的に不可（CLGeocoder=住所ジオコーダでPOI検索でない／MKLocalSearchは現在地依存で家撮り問題に抵触）と判明→**軸を座標から時間帯へ転換**。
+  `occurredAt` を時間帯ビンに集計しダッシュボードで可視化(`shared/insights/time-of-day.ts` + `features/insights/time-of-day-section.tsx`)、
+  毎週日曜20:00に端末内ローカル通知(`expo-notifications`, `shared/notifications/weekly-insight.ts`, 設定にON/OFFトグル)。外部送信ゼロ維持。
+  座標データ層(#16)はコミット済みで温存、位置設定UIは破棄。**要実機**: prebuild→dev build（Expo Go不可）/ `weekday=1=日曜`の発火曜日確認。
+  **未了（要実機）**: OCRネイティブモジュール / バックアップ(ファイル) / 編集フロー・改定ログ / 全画面の実機目視 / 通知の実機発火確認 /
   カットオーバー(mobile→ルート昇格・Web版削除)。検証は `cd mobile && pnpm exec tsc --noEmit` + `npx expo export --platform ios`。
   **pnpm注意**: mobile は `--ignore-workspace` 必須（`mobile/.npmrc`）。以下はWeb版(v0.1, 出荷停止予定)の記録。
 - **Phase 1〜6 すべて完了（v0.1 スコープ達成）**。全フェーズの受け入れ条件を実ブラウザ E2E で検証済み。
