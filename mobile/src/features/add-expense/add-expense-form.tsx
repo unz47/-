@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import {
   Modal,
@@ -169,6 +169,47 @@ export function AddExpenseForm({
               className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-text-primary"
             />
           </View>
+
+          {prefill && (
+            <View className="gap-1">
+              <Text className="text-xs text-text-secondary">
+                レシート読み取り結果
+              </Text>
+              <View className="gap-2 rounded-xl border border-border bg-surface-raised px-4 py-3">
+                <View className="flex-row items-center justify-between gap-2">
+                  <Text className="text-xs text-text-muted">店名</Text>
+                  <View className="flex-1 flex-row items-center justify-end gap-1.5">
+                    <Text
+                      className="text-sm text-text-primary"
+                      numberOfLines={1}
+                    >
+                      {prefill.merchant ?? "読み取れず"}
+                    </Text>
+                    {prefill.merchant && prefill.uncertain.merchant && (
+                      <Text className="text-xs text-warning">要確認</Text>
+                    )}
+                  </View>
+                </View>
+                <View className="flex-row items-center justify-between gap-2">
+                  <Text className="text-xs text-text-muted">購入時刻</Text>
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-sm text-text-primary">
+                      {prefill.occurredAt?.includes("T")
+                        ? format(parseISO(prefill.occurredAt), "H:mm")
+                        : "読み取れず"}
+                    </Text>
+                    {prefill.occurredAt?.includes("T") &&
+                      prefill.uncertain.date && (
+                        <Text className="text-xs text-warning">要確認</Text>
+                      )}
+                  </View>
+                </View>
+                <Text className="text-xs text-text-muted">
+                  購入時刻はダッシュボードの「時間帯別」集計に使われます。
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View className="gap-1">
             <Text className="text-xs text-text-secondary">メモ（任意）</Text>
