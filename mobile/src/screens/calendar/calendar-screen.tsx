@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { addMonths, subMonths } from "date-fns";
+import { addMonths, format, subMonths } from "date-fns";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,14 +22,32 @@ export function CalendarScreen() {
   const subs = useSubscriptions();
   const catMap = useCategoryMap();
   const [cursor, setCursor] = useState(() => new Date());
-  const [selected, setSelected] = useState<string | null>(null);
   const colors = useThemeColors();
 
   const today = useMemo(() => new Date(), []);
+  const todayMonth = toMonthKey(today);
   const month = useMemo(
     () => buildCalendarMonth(expenses, subs, toMonthKey(cursor), today),
     [expenses, subs, cursor, today],
   );
+
+  // 選択日: 当月を見ているときは今日、別月なら 1 日を既定にする
+  const defaultDate = useMemo(() => {
+    const cursorMonth = toMonthKey(cursor);
+    return cursorMonth === todayMonth
+      ? format(today, "yyyy-MM-dd")
+      : `${cursorMonth}-01`;
+  }, [cursor, todayMonth, today]);
+
+  const [selected, setSelected] = useState(defaultDate);
+
+  // 月が変わったら選択日を既定（今日 or 1日）へ戻す
+  const [prevDefault, setPrevDefault] = useState(defaultDate);
+  if (defaultDate !== prevDefault) {
+    setPrevDefault(defaultDate);
+    setSelected(defaultDate);
+  }
+
   const selectedDay = month.days.find((d) => d.date === selected) ?? null;
 
   return (
@@ -37,10 +55,7 @@ export function CalendarScreen() {
       <ScrollView contentContainerClassName="gap-4 px-4 pb-12 pt-4">
         <View className="flex-row items-center justify-between px-1">
           <Pressable
-            onPress={() => {
-              setCursor(subMonths(cursor, 1));
-              setSelected(null);
-            }}
+            onPress={() => setCursor(subMonths(cursor, 1))}
             className="p-2"
           >
             <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
@@ -54,10 +69,7 @@ export function CalendarScreen() {
             </Text>
           </View>
           <Pressable
-            onPress={() => {
-              setCursor(addMonths(cursor, 1));
-              setSelected(null);
-            }}
+            onPress={() => setCursor(addMonths(cursor, 1))}
             className="p-2"
           >
             <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
