@@ -66,6 +66,13 @@ export const subscriptions = sqliteTable(
   }),
 );
 
+// アプリ設定（key-value）。テーマ・月予算・週次通知フラグ等の端末内プリファレンス。
+// バックアップ（backup.ts）には含めない＝端末固有の好みはデータ移行と分離する。
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
 export const subChangeLogs = sqliteTable(
   "sub_change_logs",
   {

@@ -77,6 +77,18 @@ pnpm build            # 本番ビルド（最終確認）
 
 ## 6. 現在地（セッション間で引き継ぐ）
 
+- **★UX/機能 大幅改修（2026-07-04, PROJECT_PLAN §12.6）**: 競合・トレンド調査に基づき mobile/ を一括改修。
+  入力UX刷新（`shared/ui` に Sheet=reanimated ボトムシート/DateField=月グリッド日付選択/AmountInput=¥+3桁区切り/
+  ActionSheet/Chip/Fab、expo-haptics、a11y付与）/ ダッシュボード Bento 化＋自前SVGチャート
+  （react-native-svg ドーナツ・月推移6ヶ月・AnimatedYen カウントアップ）/ **月予算＋バーンダウン実装**
+  （§9設計どおり。`app_settings` テーブル=migration 0003、`shared/lib/budget.ts`、超過=danger/接近=warning）/
+  テーマ永続化（起動時復元）/ ブランドロゴ移植（simple-icons+`service-logo.tsx`）/ 値上げバッジ復元 /
+  **今年の改定影響タイル**（`raise-impact.ts`、差別化機能の前面化）/ **よく行く店TOP5**（`merchants.ts`、
+  支出フォームに店名欄追加）/ 週次通知の支出ラップ化（本文を直近7日集計から生成・起動時再スケジュール・金額載せない）/
+  CSVエクスポート / ErrorBoundary+DB再試行 / FAB Liquid Glass（iOS26+ゲート）/ **vitest 導入（`pnpm test`、37件）**。
+  検証: `pnpm exec tsc --noEmit`・`pnpm lint`・`pnpm test`・`npx expo export --platform ios` 全緑。
+  **未了: 実機目視（Sheetジェスチャ/ハプティクス/通知発火）・ウィジェット+App Intents（要ネイティブターゲット、次フェーズ本命）・
+  Foundation Models**。
 - **★React Native (Expo) 移行進行中（2026-06-29〜, ブランチ `rn-migration` / `mobile/`, PROJECT_PLAN §12）**。
   ストア公開・速度重視で Capacitor(WebView)→RN へ。Web版(ルート)と並走中。構成=Bulletproof React
   （`mobile/src/{screens,features,entities,shared}`）/ Expo SDK56 / expo-router / **NativeWind v4**(Midnight Ledger移植) /

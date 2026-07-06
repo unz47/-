@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useCategoryMap } from "@/entities/category/model/use-categories";
 import { useExpenses } from "@/entities/expense/model/use-expenses";
 import { useSubscriptions } from "@/entities/subscription/model/use-subscriptions";
+import { BudgetBurndown } from "@/features/budget/budget-burndown";
 import { useThemeColors } from "@/shared/config/theme";
 import { toMonthKey } from "@/shared/lib/aggregate";
 import { buildCalendarMonth, type CalendarDay } from "@/shared/lib/calendar";
@@ -75,6 +76,8 @@ export function CalendarScreen() {
             <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
           </Pressable>
         </View>
+
+        <BudgetBurndown spent={month.total} ym={month.ym} />
 
         <View>
           <View className="flex-row">

@@ -11,6 +11,8 @@ import type { Expense } from "@/shared/db/types";
 import { scanReceipt, toPrefill, type ReceiptPrefill } from "@/shared/ocr";
 import { formatDayHeader } from "@/shared/lib/date";
 import { formatYen } from "@/shared/lib/money";
+import { hapticWarning } from "@/shared/lib/haptics";
+import { Fab } from "@/shared/ui/fab";
 
 interface Section {
   date: string;
@@ -39,6 +41,7 @@ export function ExpensesScreen() {
   }, [expenses]);
 
   function confirmDelete(e: Expense) {
+    hapticWarning();
     Alert.alert(
       catMap.get(e.categoryId)?.name ?? "支出",
       `${formatYen(e.amount)} を削除しますか？`,
@@ -116,12 +119,7 @@ export function ExpensesScreen() {
 
       <ReceiptScanButton onScanned={onScanned} />
 
-      <Pressable
-        onPress={() => setAdding(true)}
-        className="absolute bottom-8 right-6 h-14 w-14 items-center justify-center rounded-full bg-accent shadow-lg active:opacity-80"
-      >
-        <Text className="text-3xl leading-none text-on-accent">＋</Text>
-      </Pressable>
+      <Fab onPress={() => setAdding(true)} accessibilityLabel="支出を追加" />
 
       <AddExpenseForm
         key={editing?.id ?? (prefill ? `prefill-${scanSeq}` : "new")}

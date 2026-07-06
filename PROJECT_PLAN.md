@@ -566,6 +566,7 @@ app/(expo-router routes・薄い)  src/{screens, features, entities, shared/{ui,
 - #11 OCR撮影を単写真+自動台形補正に（1枚→確認画面）
 - #12 レシートから住所も抽出・保存（db migration 0001 で address 列）
 - #13 バックアップ/復元（JSONエクスポート・インポート）
+- #18 UX/機能 大幅改修（2026-07-04, 競合・トレンド調査に基づく。詳細 §12.6）
 
 ### 12.3 未了（多くは実機検証が必要）
 - ~~OCR ネイティブモジュール~~ → #10 で実装（`mobile/modules/vision-ocr`、Expoローカルモジュール。
@@ -587,3 +588,56 @@ v0.1 Web版の全機能を RN へ移植完了（#1〜#13）。ダッシュボー
 ### 12.4 実機での動かし方
 更新版 Expo Go で `cd mobile && pnpm start`（OCR等カスタムネイティブ前は可）、
 または dev build `npx expo run:ios`（CocoaPods 要: `brew install cocoapods`。OCR以降は必須）。
+
+### 12.6 UX/機能 大幅改修（2026-07-04）
+
+競合（Copilot/Bobby/B43等）と 2025-26 モバイルファイナンス UI トレンドの調査に基づく一括改修。
+検証ゲート: `pnpm exec tsc --noEmit` / `pnpm lint`（expo lint）/ `pnpm test`（vitest 37件）/
+`npx expo export --platform ios` すべて緑。**実機目視は未（要 dev build）**。
+
+**入力UX（`shared/ui` プリミティブ新設）**
+- `Sheet`: 全フォーム共通ボトムシート（reanimated スプリング・グラバー下スワイプで dismiss・
+  KeyboardAvoidingView 内蔵）。プレーン Modal を全置換（支出/サブスク追加・編集/改定ログ）。
+- `DateField`: YYYY-MM-DD 手打ちを廃止。今日/昨日チップ＋インライン月グリッドで選択。
+- `AmountInput`: ¥プレフィックス＋入力中3桁区切り・8桁クランプ（負数/超大値を構造的に排除）。
+- `Chip` / `ActionSheet`（OS Alert のメニュー置換。Midnight Ledger 面）/ `Fab`（共通化）。
+- ハプティクス（expo-haptics）: 保存=success / 選択=light / 破壊確認=warning（`shared/lib/haptics.ts`）。
+- a11y: Button/Chip/DateField/Fab 等に accessibilityRole/Label/State を付与。
+
+**ダッシュボード Bento 化＋自前SVGチャート（react-native-svg、チャートライブラリは入れない）**
+- 主役タイル: 当月総支出カウントアップ（`AnimatedYen`、tabular-nums）＋前月比（▲▼ニュートラル）。
+- サブタイル: サブスク実請求（換算併記）/ 予算残（下記）/ **今年の改定影響**（純増=danger・純減=success、
+  `shared/insights/raise-impact.ts`。Bobby/TrackMySubs にも無い差別化機能の前面化）。
+- カテゴリ別ドーナツ（`shared/ui/charts/donut-chart.tsx`、中央に合計）＋月推移6ヶ月バー
+  （`month-trend-bars.tsx`、Web版から復元）＋時間帯別＋**よく行く店 TOP5**
+  （`shared/insights/merchants.ts`、merchantKey 名寄せ＝§11.5 B の入口。支出フォームに店名欄を追加し
+  手入力でも母数が増える）。
+
+**月予算＋バーンダウン（§9 の v0.2 設計を実装）**
+- `app_settings` key-value テーブル新設（drizzle migration 0003）。テーマ永続化（起動時復元）・
+  月予算・週次通知フラグを保持。バックアップ JSON には含めない（端末プリファレンス）。
+- `shared/lib/budget.ts`: 予算内=ok / 接近(80%またはペース超)=warn / 超過=over。
+  ダッシュボード「今月あと¥N」タイル＋カレンダーに消化バー＋経過日マーカー（超過=danger 専用色）。
+
+**サブスク画面**
+- ブランドロゴ移植（`shared/config/brands.ts`=Web版コピー＋`shared/ui/service-logo.tsx`、
+  simple-icons 単色を text-secondary で描画・頭文字フォールバック）。登録ピッカーにもロゴ。
+- 「値上げ」バッジ復元（直近30日の増額、`useRecentlyRaisedSubIds`）。アクションは Alert→自前 ActionSheet。
+
+**通知・データ出力**
+- 週次通知を「支出ラップ」化: 本文を直近7日集計から生成（最多時間帯＋件数。**金額は載せない**）。
+  起動ごとに `refreshWeeklyInsight` で本文を再スケジュール（`_layout` の WeeklyInsightRefresher）。
+- CSVエクスポート（支出のみ、BOM付きUTF-8、`features/backup-restore/csv-export.ts`）。
+
+**堅牢化・その他**
+- ErrorBoundary（`shared/ui/error-boundary.tsx`）＋ DB 初期化エラーに「再試行」（key 再マウント、
+  シード失敗も error として表面化）。
+- FAB は iOS26+ で Liquid Glass（expo-glass-effect、`isLiquidGlassAvailable()` ゲート・非対応は従来 accent）。
+- vitest 導入（`pnpm test`）: aggregate/calendar/budget/money/time-of-day/merchants/raise-impact/
+  ocr parse/merchant の純ロジック 37 テスト。
+
+**残（ネイティブターゲット・実機が必要 → 次フェーズ）**
+- ホーム/ロック画面ウィジェット（WidgetKit）＋ App Intents（クイック支出追加・Siri/アクションボタン露出）
+  → Expo config plugin + ネイティブターゲット追加が必要。調査レポートでは効果対コスト最大の目玉。
+- Foundation Models 抽出（対応機の端末内LLM、§11.9 ③）。
+- 全画面の実機目視（Sheet ジェスチャ・Liquid Glass・ハプティクス・通知発火はシミュレータ/実機でしか確認できない）。

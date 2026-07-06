@@ -17,3 +17,28 @@ export function useChangeLogs(subscriptionId: string): SubscriptionChangeLog[] {
   );
   return (data ?? []).map(toChangeLog);
 }
+
+/** 全サブスクの改定ログ（新しい順）。値上げバッジ・値上げ影響の集計に使う。 */
+export function useAllChangeLogs(): SubscriptionChangeLog[] {
+  const { data } = useLiveQuery(
+    db.select().from(subChangeLogs).orderBy(desc(subChangeLogs.changedAt)),
+  );
+  return (data ?? []).map(toChangeLog);
+}
+
+/**
+ * 直近 days 日（既定 30）に増額があったサブスク id の集合（「改定あり」バッジ用）。
+ * Web版 useRecentlyRaisedSubIds の移植。増額のみ＝バッジは danger（赤=値上げ専用）。
+ */
+export function useRecentlyRaisedSubIds(days = 30): Set<string> {
+  const logs = useAllChangeLogs();
+  const cutoff = new Date(
+    new Date().getTime() - days * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const ids = new Set<string>();
+  for (const log of logs) {
+    if (log.field !== "amount" || log.changedAt < cutoff) continue;
+    if (Number(log.newValue) > Number(log.oldValue)) ids.add(log.subscriptionId);
+  }
+  return ids;
+}

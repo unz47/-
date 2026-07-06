@@ -35,6 +35,9 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
       className={cn(
         "items-center justify-center rounded-xl px-5 py-3 active:opacity-80",
         BG[variant],

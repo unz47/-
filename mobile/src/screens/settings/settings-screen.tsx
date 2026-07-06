@@ -1,6 +1,6 @@
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Alert, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCategories } from "@/entities/category/model/use-categories";
@@ -10,9 +10,15 @@ import {
   exportBackup,
   importBackup,
 } from "@/features/backup-restore/backup-restore";
+import { exportExpensesCsv } from "@/features/backup-restore/csv-export";
+import { BudgetSettingCard } from "@/features/budget/budget-setting-card";
 import { useThemeColors } from "@/shared/config/theme";
 import { clearAllData } from "@/shared/db/maintenance";
-import { cn } from "@/shared/lib/cn";
+import {
+  setThemePreference,
+  type ThemePreference,
+} from "@/shared/db/settings";
+import { hapticWarning } from "@/shared/lib/haptics";
 import {
   disableWeeklyInsight,
   enableWeeklyInsight,
@@ -20,14 +26,15 @@ import {
 } from "@/shared/notifications/weekly-insight";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
+import { Chip } from "@/shared/ui/chip";
 
-const THEME_OPTIONS = [
+const THEME_OPTIONS: { key: ThemePreference; label: string }[] = [
   { key: "system", label: "システム" },
   { key: "light", label: "ライト" },
   { key: "dark", label: "ダーク" },
-] as const;
+];
 
-/** 設定（PROJECT_PLAN §6）。テーマ切替・データ件数・全削除。バックアップは実機検証フェーズで追加。 */
+/** 設定（PROJECT_PLAN §6）。テーマ・月予算・通知・バックアップ/CSV・全削除。 */
 export function SettingsScreen() {
   const expenses = useExpenses();
   const subs = useSubscriptions();
@@ -41,6 +48,12 @@ export function SettingsScreen() {
     isWeeklyInsightEnabled().then(setNotifyOn);
   }, []);
 
+  function pickTheme(t: ThemePreference) {
+    setColorScheme(t);
+    // 次回起動でも保持（app_settings。失敗しても表示は既に切り替わっている）
+    setThemePreference(t).catch(() => {});
+  }
+
   async function toggleNotify() {
     if (busy) return;
     setBusy(true);
@@ -49,7 +62,7 @@ export function SettingsScreen() {
         await disableWeeklyInsight();
         setNotifyOn(false);
       } else {
-        const r = await enableWeeklyInsight();
+        const r = await enableWeeklyInsight(expenses);
         if (r === "denied") {
           Alert.alert(
             "通知が許可されていません",
@@ -71,6 +84,18 @@ export function SettingsScreen() {
       await exportBackup();
     } catch (e) {
       Alert.alert("エクスポート失敗", e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onExportCsv() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await exportExpensesCsv();
+    } catch (e) {
+      Alert.alert("CSV出力失敗", e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -100,6 +125,7 @@ export function SettingsScreen() {
 
   function confirmClear() {
     // 赤(danger)は値上げ専用のため、破壊操作でもテーマの赤は使わない（§3）。
+    hapticWarning();
     Alert.alert(
       "全データ削除",
       "すべての支出・サブスクを削除し、初期状態に戻します。元に戻せません。",
@@ -120,32 +146,19 @@ export function SettingsScreen() {
             テーマ
           </Text>
           <View className="flex-row gap-2">
-            {THEME_OPTIONS.map((o) => {
-              const active = (colorScheme ?? "system") === o.key;
-              return (
-                <Pressable
-                  key={o.key}
-                  onPress={() => setColorScheme(o.key)}
-                  className={cn(
-                    "flex-1 items-center rounded-xl border py-2.5",
-                    active
-                      ? "border-accent bg-accent/15"
-                      : "border-border bg-surface-raised",
-                  )}
-                >
-                  <Text
-                    className={cn(
-                      "text-sm",
-                      active ? "text-accent" : "text-text-secondary",
-                    )}
-                  >
-                    {o.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {THEME_OPTIONS.map((o) => (
+              <View key={o.key} className="flex-1">
+                <Chip
+                  label={o.label}
+                  active={(colorScheme ?? "system") === o.key}
+                  onPress={() => pickTheme(o.key)}
+                />
+              </View>
+            ))}
           </View>
         </Card>
+
+        <BudgetSettingCard />
 
         <Card className="gap-2">
           <Text className="text-sm font-semibold text-text-secondary">
@@ -178,7 +191,7 @@ export function SettingsScreen() {
                 週次の振り返り通知
               </Text>
               <Text className="text-xs text-text-muted">
-                毎週日曜 20:00 に、使いがちな時間帯のチェックを促します（端末内のみ・外部送信なし）。
+                毎週日曜 20:00 に、直近1週間の使いがち時間帯を通知します（端末内のみ・本文に金額は載せません）。
               </Text>
             </View>
             <Switch
@@ -187,16 +200,17 @@ export function SettingsScreen() {
               disabled={busy}
               trackColor={{ true: colors.accent, false: colors.border }}
               thumbColor={colors.surfaceRaised}
+              accessibilityLabel="週次の振り返り通知"
             />
           </View>
         </Card>
 
         <Card className="gap-3">
           <Text className="text-sm font-semibold text-text-secondary">
-            バックアップ
+            バックアップ / 書き出し
           </Text>
           <Text className="text-xs text-text-muted">
-            全データを JSON で書き出し / 復元します（端末内のみ・外部送信なし）。
+            JSON は全データの復元用、CSV は支出のみ（表計算・申告用）。どちらも端末内で生成・外部送信なし。
           </Text>
           <View className="flex-row gap-3">
             <Button
@@ -214,6 +228,12 @@ export function SettingsScreen() {
               className="flex-1"
             />
           </View>
+          <Button
+            label="CSV書き出し（支出）"
+            variant="ghost"
+            onPress={onExportCsv}
+            disabled={busy}
+          />
         </Card>
 
         <Button label="全データ削除" variant="ghost" onPress={confirmClear} />

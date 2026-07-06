@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useRecentlyRaisedSubIds } from "@/entities/change-log/model/use-change-logs";
 import {
   cancelSubscription,
   reactivateSubscription,
@@ -13,12 +14,19 @@ import { ChangeLogSheet } from "@/features/subscription-logs/change-log-sheet";
 import { monthlyEquivalent } from "@/shared/lib/aggregate";
 import type { Subscription } from "@/shared/db/types";
 import { formatYen } from "@/shared/lib/money";
+import { hapticWarning } from "@/shared/lib/haptics";
+import { ActionSheet } from "@/shared/ui/action-sheet";
+import { AnimatedYen } from "@/shared/ui/animated-yen";
 import { Card } from "@/shared/ui/card";
+import { Fab } from "@/shared/ui/fab";
+import { ServiceLogo } from "@/shared/ui/service-logo";
 
-/** サブスク一覧（§6）。FABで追加、タップでアクション（編集/改定ログ/解約）。 */
+/** サブスク一覧（§6）。FABで追加、タップでアクションシート（編集/改定ログ/解約）。 */
 export function SubscriptionsScreen() {
   const subs = useSubscriptions();
+  const raisedIds = useRecentlyRaisedSubIds();
   const [adding, setAdding] = useState(false);
+  const [actionsFor, setActionsFor] = useState<Subscription | null>(null);
   const [editing, setEditing] = useState<Subscription | null>(null);
   const [logsFor, setLogsFor] = useState<Subscription | null>(null);
 
@@ -26,19 +34,8 @@ export function SubscriptionsScreen() {
   const canceled = subs.filter((s) => s.canceledAt);
   const monthlyTotal = active.reduce((a, s) => a + monthlyEquivalent(s), 0);
 
-  function openActions(s: Subscription) {
-    Alert.alert(s.serviceName, undefined, [
-      { text: "編集", onPress: () => setEditing(s) },
-      { text: "改定ログ", onPress: () => setLogsFor(s) },
-      {
-        text: "解約",
-        style: "destructive",
-        onPress: () => confirmCancel(s),
-      },
-      { text: "閉じる", style: "cancel" },
-    ]);
-  }
   function confirmCancel(s: Subscription) {
+    hapticWarning();
     Alert.alert(s.serviceName, "このサブスクを解約しますか？", [
       { text: "閉じる", style: "cancel" },
       {
@@ -56,8 +53,12 @@ export function SubscriptionsScreen() {
 
         <Card className="gap-1">
           <Text className="text-sm text-text-secondary">月額合計（換算）</Text>
-          <Text className="text-3xl font-bold text-accent">
-            {formatYen(monthlyTotal)}
+          <AnimatedYen
+            value={monthlyTotal}
+            className="text-3xl font-bold text-accent"
+          />
+          <Text className="text-xs text-text-muted">
+            アクティブ {active.length} 件
           </Text>
         </Card>
 
@@ -69,17 +70,42 @@ export function SubscriptionsScreen() {
           </Card>
         ) : (
           active.map((s) => (
-            <Pressable key={s.id} onPress={() => openActions(s)}>
+            <Pressable
+              key={s.id}
+              onPress={() => setActionsFor(s)}
+              accessibilityRole="button"
+              accessibilityLabel={`${s.serviceName} のアクションを開く`}
+            >
               <Card className="flex-row items-center justify-between active:opacity-70">
-                <View>
-                  <Text className="text-text-primary">{s.serviceName}</Text>
-                  <Text className="text-xs text-text-muted">
-                    {s.planName} ・{" "}
-                    {s.billingCycle === "yearly" ? "年額" : "月額"} ・ 毎月
-                    {s.billingDay}日
-                  </Text>
+                <View className="flex-1 flex-row items-center gap-3">
+                  <ServiceLogo
+                    presetId={s.presetId}
+                    serviceName={s.serviceName}
+                    size={24}
+                  />
+                  <View className="flex-1">
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-text-primary">{s.serviceName}</Text>
+                      {raisedIds.has(s.id) && (
+                        // 赤=値上げ専用のシグナル（§3）。直近30日の増額のみ。
+                        <View className="rounded-full bg-danger/15 px-2 py-0.5">
+                          <Text className="text-[10px] font-semibold text-danger">
+                            値上げ
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text className="text-xs text-text-muted">
+                      {s.planName} ・{" "}
+                      {s.billingCycle === "yearly" ? "年額" : "月額"} ・ 毎月
+                      {s.billingDay}日
+                    </Text>
+                  </View>
                 </View>
-                <Text className="font-semibold text-text-primary">
+                <Text
+                  className="font-semibold text-text-primary"
+                  style={{ fontVariant: ["tabular-nums"] }}
+                >
                   {formatYen(monthlyEquivalent(s))}/月
                 </Text>
               </Card>
@@ -95,6 +121,8 @@ export function SubscriptionsScreen() {
             {canceled.map((s) => (
               <Pressable
                 key={s.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${s.serviceName} を再契約`}
                 onPress={() =>
                   Alert.alert(s.serviceName, "再契約しますか？", [
                     { text: "閉じる", style: "cancel" },
@@ -106,7 +134,14 @@ export function SubscriptionsScreen() {
                 }
               >
                 <Card className="flex-row items-center justify-between opacity-60 active:opacity-40">
-                  <Text className="text-text-secondary">{s.serviceName}</Text>
+                  <View className="flex-row items-center gap-3">
+                    <ServiceLogo
+                      presetId={s.presetId}
+                      serviceName={s.serviceName}
+                      size={20}
+                    />
+                    <Text className="text-text-secondary">{s.serviceName}</Text>
+                  </View>
                   <Text className="text-xs text-text-muted">
                     {s.canceledAt} 解約
                   </Text>
@@ -117,12 +152,41 @@ export function SubscriptionsScreen() {
         )}
       </ScrollView>
 
-      <Pressable
-        onPress={() => setAdding(true)}
-        className="absolute bottom-8 right-6 h-14 w-14 items-center justify-center rounded-full bg-accent shadow-lg active:opacity-80"
-      >
-        <Text className="text-3xl leading-none text-on-accent">＋</Text>
-      </Pressable>
+      <Fab onPress={() => setAdding(true)} accessibilityLabel="サブスクを追加" />
+
+      <ActionSheet
+        visible={!!actionsFor}
+        onClose={() => setActionsFor(null)}
+        title={actionsFor?.serviceName ?? ""}
+        subtitle={
+          actionsFor
+            ? `${actionsFor.planName} ・ ${formatYen(actionsFor.amount)}${
+                actionsFor.billingCycle === "yearly" ? "/年" : "/月"
+              }`
+            : undefined
+        }
+        options={
+          actionsFor
+            ? [
+                {
+                  label: "編集",
+                  icon: "create-outline",
+                  onPress: () => setEditing(actionsFor),
+                },
+                {
+                  label: "改定ログ",
+                  icon: "time-outline",
+                  onPress: () => setLogsFor(actionsFor),
+                },
+                {
+                  label: "解約",
+                  icon: "close-circle-outline",
+                  onPress: () => confirmCancel(actionsFor),
+                },
+              ]
+            : []
+        }
+      />
 
       <AddSubscriptionForm visible={adding} onClose={() => setAdding(false)} />
       {editing && (

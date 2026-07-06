@@ -99,6 +99,8 @@ export interface UpdateExpenseInput {
   amount: number;
   categoryId: string;
   memo?: string;
+  merchant?: string;
+  merchantKey?: string;
   address?: string;
 }
 
@@ -110,6 +112,8 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<void> {
       amount: Math.round(input.amount),
       categoryId: input.categoryId,
       memo: input.memo ?? null,
+      merchant: input.merchant ?? null,
+      merchantKey: input.merchantKey ?? null,
       address: input.address ?? null,
     })
     .where(eq(expenses.id, input.id));
