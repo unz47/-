@@ -75,8 +75,11 @@ export function SubscriptionsScreen() {
               onPress={() => setActionsFor(s)}
               accessibilityRole="button"
               accessibilityLabel={`${s.serviceName} のアクションを開く`}
+              // active: は必ず Pressable 側に付ける。内側の View(Card) に付けると
+              // NativeWind がその View にプレスハンドラを注入し、親の onPress を奪う。
+              className="active:opacity-70"
             >
-              <Card className="flex-row items-center justify-between active:opacity-70">
+              <Card className="flex-row items-center justify-between">
                 <View className="flex-1 flex-row items-center gap-3">
                   <ServiceLogo
                     presetId={s.presetId}
@@ -132,8 +135,9 @@ export function SubscriptionsScreen() {
                     },
                   ])
                 }
+                className="opacity-60 active:opacity-40"
               >
-                <Card className="flex-row items-center justify-between opacity-60 active:opacity-40">
+                <Card className="flex-row items-center justify-between">
                   <View className="flex-row items-center gap-3">
                     <ServiceLogo
                       presetId={s.presetId}

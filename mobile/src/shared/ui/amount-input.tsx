@@ -58,11 +58,13 @@ export function AmountInput({
           placeholderTextColor={colors.textMuted}
           autoFocus={autoFocus}
           accessibilityLabel={label}
-          className={cn(
-            "flex-1 py-3 pl-1 font-bold text-text-primary",
-            size === "lg" ? "text-2xl" : "text-lg",
-          )}
-          style={{ fontVariant: ["tabular-nums"] }}
+          className="flex-1 py-3 pl-1 font-bold text-text-primary"
+          // text-2xl 等は lineHeight を伴い、iOS の TextInput は lineHeight があると
+          // テキストが縦中央からずれるため、サイズは fontSize のみ style で当てる。
+          style={{
+            fontVariant: ["tabular-nums"],
+            fontSize: size === "lg" ? 24 : 18,
+          }}
         />
       </View>
     </View>
