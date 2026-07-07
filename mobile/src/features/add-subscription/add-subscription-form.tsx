@@ -3,7 +3,13 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { addSubscription } from "@/entities/subscription/model/subscription-repo";
-import { SUBSCRIPTION_PRESETS, type PresetPlan } from "@/shared/config/presets";
+import {
+  PRESET_CATEGORIES,
+  PRESET_CATEGORY_LABELS,
+  SUBSCRIPTION_PRESETS,
+  type PresetCategory,
+  type PresetPlan,
+} from "@/shared/config/presets";
 import { SUBSCRIPTION_CATEGORY_ID } from "@/shared/db/seed";
 import type { BillingCycle } from "@/shared/db/types";
 import { cn } from "@/shared/lib/cn";
@@ -16,7 +22,7 @@ import { ServiceLogo } from "@/shared/ui/service-logo";
 import { Sheet } from "@/shared/ui/sheet";
 import { TextField } from "@/shared/ui/text-field";
 
-const PRESETS = SUBSCRIPTION_PRESETS.filter((p) => p.id !== "custom");
+const PRESETS = SUBSCRIPTION_PRESETS;
 
 interface Props {
   visible: boolean;
@@ -27,6 +33,7 @@ interface Props {
 export function AddSubscriptionForm({ visible, onClose }: Props) {
   const [presetId, setPresetId] = useState<string | null>(null);
   const [manual, setManual] = useState(false);
+  const [category, setCategory] = useState<PresetCategory>("video");
   const [serviceName, setServiceName] = useState("");
   const [planName, setPlanName] = useState("");
   const [amount, setAmount] = useState<number | null>(null);
@@ -63,6 +70,7 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
   function reset() {
     setPresetId(null);
     setManual(false);
+    setCategory("video");
     setServiceName("");
     setPlanName("");
     setAmount(null);
@@ -100,6 +108,7 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
 
       <View className="gap-1">
         <Text className="text-xs text-text-secondary">サービス</Text>
+        {/* 1段目: 手入力＋カテゴリで絞り込み、2段目: そのカテゴリのサービス */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -113,35 +122,58 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
               setPresetId(null);
             }}
           />
-          {PRESETS.map((p) => {
-            const active = !manual && presetId === p.id;
-            return (
-              <Pressable
-                key={p.id}
-                onPress={() => pickPreset(p.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={p.service}
-                className={cn(
-                  "flex-row items-center gap-1.5 rounded-full border px-3 py-2",
-                  active
-                    ? "border-accent bg-accent/15"
-                    : "border-border bg-surface-raised",
-                )}
-              >
-                <ServiceLogo presetId={p.id} serviceName={p.service} size={16} />
-                <Text
+          {PRESET_CATEGORIES.map((c) => (
+            <Chip
+              key={c}
+              label={PRESET_CATEGORY_LABELS[c]}
+              active={!manual && category === c}
+              onPress={() => {
+                setManual(false);
+                setCategory(c);
+              }}
+            />
+          ))}
+        </ScrollView>
+        {!manual && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2 py-1"
+          >
+            {PRESETS.filter((p) => p.category === category).map((p) => {
+              const active = presetId === p.id;
+              return (
+                <Pressable
+                  key={p.id}
+                  onPress={() => pickPreset(p.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={p.service}
                   className={cn(
-                    "text-sm",
-                    active ? "text-accent" : "text-text-secondary",
+                    "flex-row items-center gap-1.5 rounded-full border px-3 py-2",
+                    active
+                      ? "border-accent bg-accent/15"
+                      : "border-border bg-surface-raised",
                   )}
                 >
-                  {p.service}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <ServiceLogo
+                    presetId={p.id}
+                    serviceName={p.service}
+                    size={16}
+                  />
+                  <Text
+                    className={cn(
+                      "text-sm",
+                      active ? "text-accent" : "text-text-secondary",
+                    )}
+                  >
+                    {p.service}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
 
       {manual && (
