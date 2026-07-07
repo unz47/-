@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import type { Expense } from "@/shared/db/types";
 import {
   getWeeklyInsightFlag,
+  getWeeklyInsightSchedule,
   setWeeklyInsightFlag,
 } from "@/shared/db/settings";
 import {
@@ -20,10 +21,8 @@ import {
  */
 
 const WEEKLY_INSIGHT_ID = "weekly-time-insight";
-// 発火タイミング: 毎週日曜 20:00（週末夜に振り返る）。
+// 発火タイミングは設定（app_settings）から読む。既定は日曜20:00（週末夜に振り返る）。
 // weekday は Apple DateComponents 準拠で 1=日曜 … 7=土曜。
-const WEEKDAY_SUNDAY = 1;
-const HOUR = 20;
 const MINUTE = 0;
 
 const FALLBACK_BODY = "先週どの時間帯に使ったか、振り返ってみましょう。";
@@ -56,6 +55,7 @@ export async function isWeeklyInsightEnabled(): Promise<boolean> {
 }
 
 async function schedule(expenses: Expense[]): Promise<void> {
+  const { weekday, hour } = await getWeeklyInsightSchedule();
   await Notifications.scheduleNotificationAsync({
     identifier: WEEKLY_INSIGHT_ID,
     content: {
@@ -64,11 +64,20 @@ async function schedule(expenses: Expense[]): Promise<void> {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-      weekday: WEEKDAY_SUNDAY,
-      hour: HOUR,
+      weekday,
+      hour,
       minute: MINUTE,
     },
   });
+}
+
+/**
+ * 発火タイミング変更後の再登録（有効時のみ）。固定 identifier なので上書きされる。
+ */
+export async function rescheduleWeeklyInsight(
+  expenses: Expense[],
+): Promise<void> {
+  await refreshWeeklyInsight(expenses);
 }
 
 /**

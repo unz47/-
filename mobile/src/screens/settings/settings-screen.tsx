@@ -12,17 +12,23 @@ import {
 } from "@/features/backup-restore/backup-restore";
 import { exportExpensesCsv } from "@/features/backup-restore/csv-export";
 import { BudgetSettingCard } from "@/features/budget/budget-setting-card";
+import { AddCategorySheet } from "@/features/manage-categories/add-category-sheet";
 import { useThemeColors } from "@/shared/config/theme";
 import { clearAllData } from "@/shared/db/maintenance";
 import {
+  DEFAULT_WEEKLY_INSIGHT_SCHEDULE,
+  getWeeklyInsightSchedule,
   setThemePreference,
+  setWeeklyInsightSchedule,
   type ThemePreference,
+  type WeeklyInsightSchedule,
 } from "@/shared/db/settings";
 import { hapticWarning } from "@/shared/lib/haptics";
 import {
   disableWeeklyInsight,
   enableWeeklyInsight,
   isWeeklyInsightEnabled,
+  rescheduleWeeklyInsight,
 } from "@/shared/notifications/weekly-insight";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -34,6 +40,10 @@ const THEME_OPTIONS: { key: ThemePreference; label: string }[] = [
   { key: "dark", label: "ダーク" },
 ];
 
+// weekday は Apple DateComponents 準拠（1=日曜 … 7=土曜）。index+1 が weekday。
+const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => h);
+
 /** 設定（PROJECT_PLAN §6）。テーマ・月予算・通知・バックアップ/CSV・全削除。 */
 export function SettingsScreen() {
   const expenses = useExpenses();
@@ -43,10 +53,22 @@ export function SettingsScreen() {
   const colors = useThemeColors();
   const [busy, setBusy] = useState(false);
   const [notifyOn, setNotifyOn] = useState(false);
+  const [schedule, setSchedule] = useState<WeeklyInsightSchedule>(
+    DEFAULT_WEEKLY_INSIGHT_SCHEDULE,
+  );
+  const [addingCategory, setAddingCategory] = useState(false);
 
   useEffect(() => {
     isWeeklyInsightEnabled().then(setNotifyOn);
+    getWeeklyInsightSchedule().then(setSchedule);
   }, []);
+
+  async function pickSchedule(next: WeeklyInsightSchedule) {
+    setSchedule(next);
+    await setWeeklyInsightSchedule(next);
+    // 有効時は新しいタイミングで登録し直す（無効時は保存だけ＝次回ONで反映）。
+    if (notifyOn) await rescheduleWeeklyInsight(expenses);
+  }
 
   function pickTheme(t: ThemePreference) {
     setColorScheme(t);
@@ -182,6 +204,11 @@ export function SettingsScreen() {
               <Text className="text-sm text-text-primary">{c.name}</Text>
             </View>
           ))}
+          <Button
+            label="＋ カテゴリを追加"
+            variant="ghost"
+            onPress={() => setAddingCategory(true)}
+          />
         </Card>
 
         <Card className="gap-2">
@@ -191,7 +218,9 @@ export function SettingsScreen() {
                 週次の振り返り通知
               </Text>
               <Text className="text-xs text-text-muted">
-                毎週日曜 20:00 に、直近1週間の使いがち時間帯を通知します（端末内のみ・本文に金額は載せません）。
+                毎週{WEEKDAY_LABELS[schedule.weekday - 1]}曜{" "}
+                {schedule.hour}:00
+                に、直近1週間の使いがち時間帯を通知します（端末内のみ・本文に金額は載せません）。
               </Text>
             </View>
             <Switch
@@ -203,6 +232,37 @@ export function SettingsScreen() {
               accessibilityLabel="週次の振り返り通知"
             />
           </View>
+          {notifyOn && (
+            <View className="gap-2 pt-1">
+              <View className="flex-row gap-1.5">
+                {WEEKDAY_LABELS.map((label, i) => (
+                  <View key={label} className="flex-1">
+                    <Chip
+                      label={label}
+                      active={schedule.weekday === i + 1}
+                      onPress={() =>
+                        pickSchedule({ ...schedule, weekday: i + 1 })
+                      }
+                    />
+                  </View>
+                ))}
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerClassName="gap-1.5 py-0.5"
+              >
+                {HOUR_OPTIONS.map((h) => (
+                  <Chip
+                    key={h}
+                    label={`${h}時`}
+                    active={schedule.hour === h}
+                    onPress={() => pickSchedule({ ...schedule, hour: h })}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </Card>
 
         <Card className="gap-3">
@@ -238,6 +298,12 @@ export function SettingsScreen() {
 
         <Button label="全データ削除" variant="ghost" onPress={confirmClear} />
       </ScrollView>
+
+      <AddCategorySheet
+        visible={addingCategory}
+        onClose={() => setAddingCategory(false)}
+        existingNames={cats.map((c) => c.name)}
+      />
     </SafeAreaView>
   );
 }
