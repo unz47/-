@@ -1,14 +1,13 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "エンログ",
+    "slug": "enlog",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.unz47.expensetracker",
       "infoPlist": {
         "NSCameraUsageDescription": "レシートを撮影して金額・店名を読み取るために使います。画像は端末内で処理され、外部に送信されません。",
