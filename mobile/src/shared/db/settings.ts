@@ -15,6 +15,7 @@ const KEYS = {
   weeklyInsight: "weeklyInsight",
   weeklyInsightWeekday: "weeklyInsightWeekday",
   weeklyInsightHour: "weeklyInsightHour",
+  weeklyInsightMinute: "weeklyInsightMinute",
 } as const;
 
 async function getValue(key: string): Promise<string | null> {
@@ -79,16 +80,18 @@ export async function setWeeklyInsightFlag(on: boolean): Promise<void> {
   await setValue(KEYS.weeklyInsight, on ? "1" : "0");
 }
 
-// --- 週次通知の発火タイミング（weekday: 1=日曜…7=土曜 / hour: 0-23） ---
+// --- 週次通知の発火タイミング（weekday: 1=日曜…7=土曜 / hour: 0-23 / minute: 0-59） ---
 
 export interface WeeklyInsightSchedule {
   weekday: number;
   hour: number;
+  minute: number;
 }
 
 export const DEFAULT_WEEKLY_INSIGHT_SCHEDULE: WeeklyInsightSchedule = {
   weekday: 1, // 日曜
   hour: 20,
+  minute: 0,
 };
 
 function parseIntIn(v: string | null, min: number, max: number): number | null {
@@ -97,14 +100,16 @@ function parseIntIn(v: string | null, min: number, max: number): number | null {
 }
 
 export async function getWeeklyInsightSchedule(): Promise<WeeklyInsightSchedule> {
-  const [w, h] = await Promise.all([
+  const [w, h, m] = await Promise.all([
     getValue(KEYS.weeklyInsightWeekday),
     getValue(KEYS.weeklyInsightHour),
+    getValue(KEYS.weeklyInsightMinute),
   ]);
   return {
     weekday:
       parseIntIn(w, 1, 7) ?? DEFAULT_WEEKLY_INSIGHT_SCHEDULE.weekday,
     hour: parseIntIn(h, 0, 23) ?? DEFAULT_WEEKLY_INSIGHT_SCHEDULE.hour,
+    minute: parseIntIn(m, 0, 59) ?? DEFAULT_WEEKLY_INSIGHT_SCHEDULE.minute,
   };
 }
 
@@ -114,5 +119,6 @@ export async function setWeeklyInsightSchedule(
   await Promise.all([
     setValue(KEYS.weeklyInsightWeekday, String(s.weekday)),
     setValue(KEYS.weeklyInsightHour, String(s.hour)),
+    setValue(KEYS.weeklyInsightMinute, String(s.minute)),
   ]);
 }

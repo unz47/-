@@ -16,3 +16,6 @@ export const CATEGORY_PALETTE = [
 export function categoryColor(index: number): string {
   return CATEGORY_PALETTE[index % CATEGORY_PALETTE.length];
 }
+
+/** パレット色スウォッチ上に描く記号のインク色（全6色に対しコントラスト確保できる暗色）。 */
+export const CATEGORY_SWATCH_INK = "#07120F";

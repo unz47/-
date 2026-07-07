@@ -23,7 +23,6 @@ import {
 const WEEKLY_INSIGHT_ID = "weekly-time-insight";
 // 発火タイミングは設定（app_settings）から読む。既定は日曜20:00（週末夜に振り返る）。
 // weekday は Apple DateComponents 準拠で 1=日曜 … 7=土曜。
-const MINUTE = 0;
 
 const FALLBACK_BODY = "先週どの時間帯に使ったか、振り返ってみましょう。";
 
@@ -55,7 +54,7 @@ export async function isWeeklyInsightEnabled(): Promise<boolean> {
 }
 
 async function schedule(expenses: Expense[]): Promise<void> {
-  const { weekday, hour } = await getWeeklyInsightSchedule();
+  const { weekday, hour, minute } = await getWeeklyInsightSchedule();
   await Notifications.scheduleNotificationAsync({
     identifier: WEEKLY_INSIGHT_ID,
     content: {
@@ -66,7 +65,7 @@ async function schedule(expenses: Expense[]): Promise<void> {
       type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
       weekday,
       hour,
-      minute: MINUTE,
+      minute,
     },
   });
 }

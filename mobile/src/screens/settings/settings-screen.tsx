@@ -1,6 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
+import { DatePicker, Host, Picker, Text as SwiftUIText } from "@expo/ui/swift-ui";
+import { pickerStyle, tag } from "@expo/ui/swift-ui/modifiers";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, Switch, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCategories } from "@/entities/category/model/use-categories";
@@ -12,8 +22,11 @@ import {
 } from "@/features/backup-restore/backup-restore";
 import { exportExpensesCsv } from "@/features/backup-restore/csv-export";
 import { BudgetSettingCard } from "@/features/budget/budget-setting-card";
-import { AddCategorySheet } from "@/features/manage-categories/add-category-sheet";
+import { CategoryFormSheet } from "@/features/manage-categories/category-form-sheet";
+import { deleteCategory } from "@/entities/category/model/category-repo";
 import { useThemeColors } from "@/shared/config/theme";
+import type { Category } from "@/shared/db/types";
+import { ActionSheet } from "@/shared/ui/action-sheet";
 import { clearAllData } from "@/shared/db/maintenance";
 import {
   DEFAULT_WEEKLY_INSIGHT_SCHEDULE,
@@ -42,7 +55,6 @@ const THEME_OPTIONS: { key: ThemePreference; label: string }[] = [
 
 // weekday は Apple DateComponents 準拠（1=日曜 … 7=土曜）。index+1 が weekday。
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => h);
 
 /** 設定（PROJECT_PLAN §6）。テーマ・月予算・通知・バックアップ/CSV・全削除。 */
 export function SettingsScreen() {
@@ -57,6 +69,9 @@ export function SettingsScreen() {
     DEFAULT_WEEKLY_INSIGHT_SCHEDULE,
   );
   const [addingCategory, setAddingCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryActionsFor, setCategoryActionsFor] =
+    useState<Category | null>(null);
 
   useEffect(() => {
     isWeeklyInsightEnabled().then(setNotifyOn);
@@ -68,6 +83,25 @@ export function SettingsScreen() {
     await setWeeklyInsightSchedule(next);
     // 有効時は新しいタイミングで登録し直す（無効時は保存だけ＝次回ONで反映）。
     if (notifyOn) await rescheduleWeeklyInsight(expenses);
+  }
+
+  function confirmDeleteCategory(c: Category) {
+    const used = expenses.filter((e) => e.categoryId === c.id).length;
+    hapticWarning();
+    Alert.alert(
+      c.name,
+      used > 0
+        ? `${used}件の支出で使用中です。削除すると「その他」に付け替えます。`
+        : "このカテゴリを削除しますか？",
+      [
+        { text: "閉じる", style: "cancel" },
+        {
+          text: "削除する",
+          style: "destructive",
+          onPress: () => deleteCategory(c.id),
+        },
+      ],
+    );
   }
 
   function pickTheme(t: ThemePreference) {
@@ -195,15 +229,41 @@ export function SettingsScreen() {
           <Text className="text-sm font-semibold text-text-secondary">
             カテゴリ
           </Text>
-          {cats.map((c) => (
-            <View key={c.id} className="flex-row items-center gap-2">
-              <View
-                className="h-3 w-3 rounded-full"
-                style={{ backgroundColor: c.color }}
-              />
-              <Text className="text-sm text-text-primary">{c.name}</Text>
-            </View>
-          ))}
+          {cats.map((c) =>
+            c.isDefault ? (
+              <View key={c.id} className="flex-row items-center gap-2 py-1">
+                <View
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: c.color }}
+                />
+                <Text className="text-sm text-text-primary">{c.name}</Text>
+              </View>
+            ) : (
+              // ユーザー追加分だけタップで編集/削除（既定カテゴリは集計の土台なので固定）
+              <Pressable
+                key={c.id}
+                onPress={() => setCategoryActionsFor(c)}
+                accessibilityRole="button"
+                accessibilityLabel={`${c.name} のアクションを開く`}
+                className="active:opacity-70"
+              >
+                <View className="flex-row items-center justify-between py-1">
+                  <View className="flex-row items-center gap-2">
+                    <View
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: c.color }}
+                    />
+                    <Text className="text-sm text-text-primary">{c.name}</Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={14}
+                    color={colors.textMuted}
+                  />
+                </View>
+              </Pressable>
+            ),
+          )}
           <Button
             label="＋ カテゴリを追加"
             variant="ghost"
@@ -219,7 +279,7 @@ export function SettingsScreen() {
               </Text>
               <Text className="text-xs text-text-muted">
                 毎週{WEEKDAY_LABELS[schedule.weekday - 1]}曜{" "}
-                {schedule.hour}:00
+                {schedule.hour}:{String(schedule.minute).padStart(2, "0")}
                 に、直近1週間の使いがち時間帯を通知します（端末内のみ・本文に金額は載せません）。
               </Text>
             </View>
@@ -233,34 +293,44 @@ export function SettingsScreen() {
             />
           </View>
           {notifyOn && (
-            <View className="gap-2 pt-1">
-              <View className="flex-row gap-1.5">
-                {WEEKDAY_LABELS.map((label, i) => (
-                  <View key={label} className="flex-1">
-                    <Chip
-                      label={label}
-                      active={schedule.weekday === i + 1}
-                      onPress={() =>
-                        pickSchedule({ ...schedule, weekday: i + 1 })
-                      }
-                    />
-                  </View>
-                ))}
+            // ネイティブ（SwiftUI）のメニュー/時刻ピッカー。システム外観に追従する。
+            <View className="flex-row items-center justify-between pt-1">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-xs text-text-secondary">曜日</Text>
+                <Host matchContents>
+                  <Picker
+                    selection={schedule.weekday}
+                    onSelectionChange={(w) =>
+                      pickSchedule({ ...schedule, weekday: Number(w) })
+                    }
+                    modifiers={[pickerStyle("menu")]}
+                  >
+                    {WEEKDAY_LABELS.map((label, i) => (
+                      <SwiftUIText key={label} modifiers={[tag(i + 1)]}>
+                        {`${label}曜日`}
+                      </SwiftUIText>
+                    ))}
+                  </Picker>
+                </Host>
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerClassName="gap-1.5 py-0.5"
-              >
-                {HOUR_OPTIONS.map((h) => (
-                  <Chip
-                    key={h}
-                    label={`${h}時`}
-                    active={schedule.hour === h}
-                    onPress={() => pickSchedule({ ...schedule, hour: h })}
+              <View className="flex-row items-center gap-2">
+                <Text className="text-xs text-text-secondary">時刻</Text>
+                <Host matchContents>
+                  <DatePicker
+                    selection={
+                      new Date(2000, 0, 1, schedule.hour, schedule.minute)
+                    }
+                    displayedComponents={["hourAndMinute"]}
+                    onDateChange={(d) =>
+                      pickSchedule({
+                        ...schedule,
+                        hour: d.getHours(),
+                        minute: d.getMinutes(),
+                      })
+                    }
                   />
-                ))}
-              </ScrollView>
+                </Host>
+              </View>
             </View>
           )}
         </Card>
@@ -299,11 +369,44 @@ export function SettingsScreen() {
         <Button label="全データ削除" variant="ghost" onPress={confirmClear} />
       </ScrollView>
 
-      <AddCategorySheet
+      <ActionSheet
+        visible={!!categoryActionsFor}
+        onClose={() => setCategoryActionsFor(null)}
+        title={categoryActionsFor?.name ?? ""}
+        options={
+          categoryActionsFor
+            ? [
+                {
+                  label: "編集",
+                  icon: "create-outline",
+                  onPress: () => setEditingCategory(categoryActionsFor),
+                },
+                {
+                  label: "削除",
+                  icon: "trash-outline",
+                  onPress: () => confirmDeleteCategory(categoryActionsFor),
+                },
+              ]
+            : []
+        }
+      />
+
+      <CategoryFormSheet
         visible={addingCategory}
         onClose={() => setAddingCategory(false)}
         existingNames={cats.map((c) => c.name)}
       />
+      {editingCategory && (
+        <CategoryFormSheet
+          key={editingCategory.id}
+          visible
+          editing={editingCategory}
+          onClose={() => setEditingCategory(null)}
+          existingNames={cats
+            .filter((c) => c.id !== editingCategory.id)
+            .map((c) => c.name)}
+        />
+      )}
     </SafeAreaView>
   );
 }
