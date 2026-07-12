@@ -10,9 +10,13 @@
     "ios": {
       "bundleIdentifier": "com.unz47.expensetracker",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "レシートを撮影して金額・店名を読み取るために使います。画像は端末内で処理され、外部に送信されません。",
         "CFBundleDevelopmentRegion": "ja",
-        "CFBundleLocalizations": ["ja", "en"],
+        "CFBundleLocalizations": [
+          "ja",
+          "en"
+        ],
         "CFBundleAllowMixedLocalizations": true
       }
     },
@@ -42,11 +46,26 @@
         }
       ],
       "./plugins/withoutApsEnvironment",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "レシートを撮影して金額・店名を読み取るために使います。画像は端末内で処理され、外部に送信されません。",
+          "photosPermission": "レシート画像を読み取る場合に使います。画像は端末内で処理され、外部に送信されません。",
+          "microphonePermission": "動画撮影時にマイクを使用します。本アプリが音声を外部に送信することはありません。"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ccb30d21-0725-4e37-8153-abfb2efcc2c6"
+      }
+    },
+    "owner": "unz47"
   }
 }
