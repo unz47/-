@@ -1,0 +1,34 @@
+# EAS Build には mobile を単体プロジェクトとして渡す。
+# ルート（Web版）の workspace 情報を見せないことで、ビルダーが
+# mobile/pnpm-lock.yaml + mobile/.npmrc で独立インストールする（ローカルと同じ構成）。
+.git
+node_modules
+**/node_modules
+
+# ルートの workspace / Web版一式（RN ビルドに不要）
+/pnpm-workspace.yaml
+/pnpm-lock.yaml
+/package.json
+/src
+/public
+/scripts
+/out
+/ios
+/docs
+/next.config.ts
+/next-env.d.ts
+/postcss.config.mjs
+/eslint.config.mjs
+/tsconfig.json
+/tsconfig.tsbuildinfo
+/capacitor.config.ts
+/skills-lock.json
+
+# mobile 内の生成物（.gitignore 相当を再現。ios/android はビルダーが prebuild で作る）
+mobile/ios
+mobile/android
+mobile/.expo
+mobile/dist
+mobile/web-build
+mobile/expo-env.d.ts
+mobile/.metro-health-check*
