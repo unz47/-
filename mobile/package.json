@@ -52,6 +52,7 @@
     "vitest": "^4.1.9"
   },
   "scripts": {
+    "eas-build-post-install": "pnpm install --ignore-workspace",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
