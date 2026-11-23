@@ -94,7 +94,7 @@ pnpm build            # 本番ビルド（最終確認）
   **注意: Release ビルドで新クラスのスタイルが出ない時は NativeWind の CSS キャッシュが原因**
   → `node_modules/.cache` と `$TMPDIR/metro-cache` を消して再ビルド。
   次期候補: ストアレビュー誘導（expo-store-review）/ OCRネイティブ移植 / ウィジェット+App Intents。
-- **★v1.1.0 サブスク管理の拡充（2026-11-22, PROJECT_PLAN §12.7, 未提出）**: 次回請求日・今後30日の請求・
+- **★v1.1.0 サブスク管理の拡充（2026-11-22, PROJECT_PLAN §12.7, 2026-11-23 ビルド6で審査提出済み）**: 次回請求日・今後30日の請求・
   詳細シート（年間コスト/契約期間/累計概算）・更新リマインド通知・無料体験・メモ・並び替え・解約済み集約。
   migration 0004（`memo`/`trial_ends_at`）。`app.json` version=1.1.0。ストア文言は `docs/app-store-metadata.md` 末尾。
   **検証ゲート（mobile）= `pnpm exec tsc --noEmit && pnpm lint && pnpm test` + `npx expo export --platform ios`**
