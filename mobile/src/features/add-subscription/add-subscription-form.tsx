@@ -1,6 +1,6 @@
-import { format } from "date-fns";
+import { addDays, format, getDate, getMonth, parseISO } from "date-fns";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 
 import { addSubscription } from "@/entities/subscription/model/subscription-repo";
 import {
@@ -10,6 +10,7 @@ import {
   type PresetCategory,
   type PresetPlan,
 } from "@/shared/config/presets";
+import { useThemeColors } from "@/shared/config/theme";
 import { SUBSCRIPTION_CATEGORY_ID } from "@/shared/db/seed";
 import type { BillingCycle } from "@/shared/db/types";
 import { cn } from "@/shared/lib/cn";
@@ -31,6 +32,7 @@ interface Props {
 
 /** サブスク登録（プリセット or 手入力）。プリセット価格は固定初期値・上書き前提（§10）。 */
 export function AddSubscriptionForm({ visible, onClose }: Props) {
+  const colors = useThemeColors();
   const [presetId, setPresetId] = useState<string | null>(null);
   const [manual, setManual] = useState(false);
   const [category, setCategory] = useState<PresetCategory>("video");
@@ -38,16 +40,27 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
   const [planName, setPlanName] = useState("");
   const [amount, setAmount] = useState<number | null>(null);
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
-  const [billingDay, setBillingDay] = useState("1");
+  const [billingDay, setBillingDay] = useState(() =>
+    String(new Date().getDate()),
+  );
+  // 課金日は開始日（体験ありなら体験終了日）の日に自動で合わせる。手で変えたら追従をやめる。
+  const [billingDayTouched, setBillingDayTouched] = useState(false);
   const [startedAt, setStartedAt] = useState(() =>
     format(new Date(), "yyyy-MM-dd"),
   );
+  const [trial, setTrial] = useState(false);
+  const [trialEndsAt, setTrialEndsAt] = useState(() =>
+    format(addDays(new Date(), 7), "yyyy-MM-dd"),
+  );
+  const [memo, setMemo] = useState("");
 
   const preset = PRESETS.find((p) => p.id === presetId);
   const dayNum = Math.min(
     31,
     Math.max(1, Number(billingDay.replace(/[^\d]/g, "")) || 1),
   );
+  // 無料体験ありは「体験終了日＝初回請求日」を契約開始とする（体験期間は月次集計に乗らない §4）。
+  const firstChargeAt = trial ? trialEndsAt : startedAt;
   const name = manual ? serviceName.trim() : (preset?.service ?? "");
   const valid = name.length > 0 && amount != null && amount > 0;
 
@@ -62,6 +75,21 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
       setCycle(first.cycle);
     }
   }
+  function syncBillingDay(date: string) {
+    if (!billingDayTouched) setBillingDay(String(getDate(parseISO(date))));
+  }
+  function pickStartedAt(date: string) {
+    setStartedAt(date);
+    if (!trial) syncBillingDay(date);
+  }
+  function pickTrialEndsAt(date: string) {
+    setTrialEndsAt(date);
+    if (trial) syncBillingDay(date);
+  }
+  function toggleTrial(on: boolean) {
+    setTrial(on);
+    syncBillingDay(on ? trialEndsAt : startedAt);
+  }
   function pickPlan(plan: PresetPlan) {
     setPlanName(plan.name);
     setAmount(plan.amount);
@@ -75,8 +103,12 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
     setPlanName("");
     setAmount(null);
     setCycle("monthly");
-    setBillingDay("1");
+    setBillingDay(String(new Date().getDate()));
+    setBillingDayTouched(false);
     setStartedAt(format(new Date(), "yyyy-MM-dd"));
+    setTrial(false);
+    setTrialEndsAt(format(addDays(new Date(), 7), "yyyy-MM-dd"));
+    setMemo("");
   }
   async function submit() {
     if (!valid || amount == null) return;
@@ -87,8 +119,13 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
       billingCycle: cycle,
       categoryId: SUBSCRIPTION_CATEGORY_ID,
       billingDay: dayNum,
-      startedAt,
+      // 年額の請求月は初回請求日の月で確定させておく（後から編集で変えられる）
+      billingMonth:
+        cycle === "yearly" ? getMonth(parseISO(firstChargeAt)) + 1 : undefined,
+      startedAt: firstChargeAt,
       presetId: preset?.id,
+      memo,
+      trialEndsAt: trial ? trialEndsAt : undefined,
     });
     hapticSuccess();
     reset();
@@ -243,14 +280,54 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
           <TextField
             label="課金日"
             value={billingDay}
-            onChangeText={setBillingDay}
+            onChangeText={(t) => {
+              setBillingDayTouched(true);
+              setBillingDay(t);
+            }}
             keyboardType="number-pad"
           />
         </View>
-        <View className="flex-[2]" />
+        <View className="flex-[2] justify-end pb-3">
+          <Text className="text-xs text-text-muted">
+            {cycle === "yearly"
+              ? `毎年${getMonth(parseISO(firstChargeAt)) + 1}月${dayNum}日に請求`
+              : `毎月${dayNum}日に請求（月末を超える日は月末）`}
+          </Text>
+        </View>
       </View>
 
-      <DateField label="開始日" value={startedAt} onChange={setStartedAt} />
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="flex-1">
+          <Text className="text-sm text-text-primary">無料体験あり</Text>
+          <Text className="text-xs text-text-muted">
+            体験が終わる日から課金として数え、終了前に通知できます。
+          </Text>
+        </View>
+        <Switch
+          value={trial}
+          onValueChange={toggleTrial}
+          trackColor={{ true: colors.accent, false: colors.border }}
+          thumbColor={colors.surfaceRaised}
+          accessibilityLabel="無料体験あり"
+        />
+      </View>
+
+      {trial ? (
+        <DateField
+          label="体験終了日（初回請求日）"
+          value={trialEndsAt}
+          onChange={pickTrialEndsAt}
+        />
+      ) : (
+        <DateField label="開始日" value={startedAt} onChange={pickStartedAt} />
+      )}
+
+      <TextField
+        label="メモ（任意）"
+        value={memo}
+        onChangeText={setMemo}
+        placeholder="例: 楽天カード払い / 家族で共有"
+      />
 
       <View className="flex-row gap-3 pt-1">
         <Button

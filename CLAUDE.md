@@ -43,7 +43,7 @@ pnpm build            # 本番ビルド（最終確認）
 ### 必ず守る設計判断（§10）
 - **サブスクは Expense に実体を作らない**。月集計時に動的合算（§4）。二重計上を避ける。
 - **プリセット価格は固定初期値**。最新価格を調べに行かない。ユーザー上書き前提。
-- **永続化は IndexedDB のみ。出荷アプリは外部送信を一切しない**（プライバシー優先）。OCR も**端末内完結**
+- **永続化は IndexedDB のみ。出荷アプリは外部送信を一切しない**（プライバシー優先。唯一の例外は OTA の更新確認＝ユーザーデータなし、PROJECT_PLAN §10）。OCR も**端末内完結**
   （Apple Vision + 対応機は Foundation Models、PROJECT_PLAN §11.9）。クラウド OCR（`ocr-proxy/`）は
   試作後に**全撤去済み**（2026-06-28）。再導入しない。
 - **赤(`--color-danger`)は値上げ/予算超過専用**。装飾に赤を使わない。改定: 増額=danger / 減額=success。
@@ -77,6 +77,32 @@ pnpm build            # 本番ビルド（最終確認）
 
 ## 6. 現在地（セッション間で引き継ぐ）
 
+- **★★App Store 公開（2026-07-16 審査通過）**: iOS アプリ**「エンログ」v1.0.0 として公開**。
+  Bundle ID `com.unz47.expensetracker` / ASC App ID `6790129026` / ストア https://apps.apple.com/jp/app/id6790129026 。
+  アプリ名=エンログ / slug=enlog / アイコン=teal リング＋¥（`mobile/assets/images/icon.{png,svg}`）。
+  サポート+ポリシーは公開リポジトリ `unz47/enlog`（GitHub Pages: unz47.github.io/enlog）。Connect 用文言は
+  `docs/app-store-metadata.md`・スクショは `docs/store-assets/`（6.9インチ、シミュレータDBへのデモデータ直挿入で撮影）。
+  **提出パイプライン=EAS**: モノレポのため **`.easignore`（リポジトリルート）でルート workspace/Web版を除外し
+  mobile 単体としてアップロード**（これ無しだと mobile の node_modules が入らず Read app config で失敗）。
+  以後の提出は `cd mobile && EAS_NO_VCS=1 npx eas-cli build -p ios --profile production --non-interactive`
+  → `npx eas-cli submit -p ios --latest --non-interactive`（ASC API キーは EAS 保存済み・ビルド番号自動増分・
+  輸出コンプライアンスは ITSAppUsesNonExemptEncryption=false 宣言済み）。
+  **公開後 2026-07-12 までの追加実装**: プリセット64サービス化（カテゴリ2段選択）/ 通知タイミング個別設定
+  （曜日+時刻分単位、@expo/ui の SwiftUI ピッカー）/ カテゴリ追加・編集・削除（削除は「その他」へ付け替え）/
+  実機QA修正2件（Pressable 内の Card に `active:` を付けると NativeWind がタップを奪う→Pressable 側へ移動 /
+  TextInput は lineHeight 付きサイズクラス禁止→fontSize 直指定）。
+  **注意: Release ビルドで新クラスのスタイルが出ない時は NativeWind の CSS キャッシュが原因**
+  → `node_modules/.cache` と `$TMPDIR/metro-cache` を消して再ビルド。
+  次期候補: ストアレビュー誘導（expo-store-review）/ OCRネイティブ移植 / ウィジェット+App Intents。
+- **★v1.1.0 サブスク管理の拡充（2026-11-22, PROJECT_PLAN §12.7, 未提出）**: 次回請求日・今後30日の請求・
+  詳細シート（年間コスト/契約期間/累計概算）・更新リマインド通知・無料体験・メモ・並び替え・解約済み集約。
+  migration 0004（`memo`/`trial_ends_at`）。`app.json` version=1.1.0。ストア文言は `docs/app-store-metadata.md` 末尾。
+  **検証ゲート（mobile）= `pnpm exec tsc --noEmit && pnpm lint && pnpm test` + `npx expo export --platform ios`**
+  （lint は mobile 単体の `eslint.config.js`。`pnpm install --ignore-workspace` 後に動く）。
+- **★OTA アップデート（EAS Update, 2026-11-23, PROJECT_PLAN §12.8）**: v1.1.0 バイナリに同梱。
+  配信 `cd mobile && EAS_NO_VCS=1 npx eas-cli update --channel production --message "..." --non-interactive`。
+  **runtimeVersion=appVersion: ネイティブ依存/設定を変えたら必ず version を上げてストア提出（OTA で配らない）**。
+  外部送信の唯一の例外（更新確認のみ・ユーザーデータは載せない）。App Privacy は申告しない（「データを収集しない」維持, 2026-11-23 決定）。
 - **★UX/機能 大幅改修（2026-07-04, PROJECT_PLAN §12.6）**: 競合・トレンド調査に基づき mobile/ を一括改修。
   入力UX刷新（`shared/ui` に Sheet=reanimated ボトムシート/DateField=月グリッド日付選択/AmountInput=¥+3桁区切り/
   ActionSheet/Chip/Fab、expo-haptics、a11y付与）/ ダッシュボード Bento 化＋自前SVGチャート

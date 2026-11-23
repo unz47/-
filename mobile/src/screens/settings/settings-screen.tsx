@@ -20,9 +20,11 @@ import {
   exportBackup,
   importBackup,
 } from "@/features/backup-restore/backup-restore";
+import { AppUpdateCard } from "@/features/app-updates/app-update-card";
 import { exportExpensesCsv } from "@/features/backup-restore/csv-export";
 import { BudgetSettingCard } from "@/features/budget/budget-setting-card";
 import { CategoryFormSheet } from "@/features/manage-categories/category-form-sheet";
+import { RenewalReminderCard } from "@/features/renewal-reminders/renewal-reminder-card";
 import { deleteCategory } from "@/entities/category/model/category-repo";
 import { useThemeColors } from "@/shared/config/theme";
 import type { Category } from "@/shared/db/types";
@@ -335,6 +337,8 @@ export function SettingsScreen() {
           )}
         </Card>
 
+        <RenewalReminderCard />
+
         <Card className="gap-3">
           <Text className="text-sm font-semibold text-text-secondary">
             バックアップ / 書き出し
@@ -365,6 +369,8 @@ export function SettingsScreen() {
             disabled={busy}
           />
         </Card>
+
+        <AppUpdateCard />
 
         <Button label="全データ削除" variant="ghost" onPress={confirmClear} />
       </ScrollView>

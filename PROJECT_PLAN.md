@@ -378,6 +378,10 @@ src/
   OCR も**端末内完結**（Apple Vision + 対応機は Foundation Models、§11.9）＝外部送信ゼロを維持。
   - 補足: クラウド OCR（`ocr-proxy/`、Bedrock Claude Vision）も試作したが、ストア公開には不適（§11.9）として
     **2026-06-28 に全撤去済み**（AWS デプロイ・ローカルコードとも削除）。OCR は端末内のみ。
+  - **唯一の例外 = OTA アップデート（EAS Update, 2026-11-23, §12.8）**。起動時に `u.expo.dev` へ
+    「更新の有無」を問い合わせ、JS/アセットを取得する通信だけを許す。**ユーザーデータ（支出・サブスク・設定・
+    レシート画像）は一切載せない**。送るのは Expo の標準ヘッダ（プラットフォーム・runtimeVersion・
+    `EAS-Client-ID`=インストール単位のランダム UUID）のみ。解析・クラッシュ収集 SDK は引き続き入れない。
 - **赤は値上げ/超過専用**。装飾に赤を使わない。
 - **解約は論理削除**（canceledAt をセット）。レコードは消さない（履歴・ログ保持のため）。
 - **再契約は新しい契約レコードを作る**（解約レコードは履歴として残す）。理由: 集計は動的（§4）なので、
@@ -641,3 +645,53 @@ v0.1 Web版の全機能を RN へ移植完了（#1〜#13）。ダッシュボー
   → Expo config plugin + ネイティブターゲット追加が必要。調査レポートでは効果対コスト最大の目玉。
 - Foundation Models 抽出（対応機の端末内LLM、§11.9 ③）。
 - 全画面の実機目視（Sheet ジェスチャ・Liquid Glass・ハプティクス・通知発火はシミュレータ/実機でしか確認できない）。
+
+### 12.7 サブスク管理の拡充（2026-11-22, v1.1.0）
+
+公開済み v1.0.0 の差別化軸（サブスク）を厚くする。§10 の不変条件はすべて維持
+（請求予定・年間コスト・累計は**保存せず都度計算**＝動的合算、外部送信なし、赤=値上げ専用）。
+
+- **請求スケジュールの純ロジック** `shared/lib/billing.ts`（vitest）: 次回請求日・今後 N 件の請求日・
+  今後 N 日の請求予定・年間コスト・契約月数・累計支払い（**現在金額での概算**と UI で明示）・
+  並び替え（次回請求/金額/名前）。月末クランプと年額の請求月は既存 `subscriptionChargeDay` に委譲し、
+  月次集計・カレンダーと同じ請求ルールを共有する。
+- **データ**: `subscriptions` に `memo` / `trial_ends_at`（migration 0004、任意列・移行不要）。
+  **無料体験は「体験終了日＝初回請求日＝startedAt」として登録**し、集計（§4）は startedAt だけを見る
+  ＝体験期間は計上されない。`trialEndsAt` は表示（体験中バッジ=info）とリマインド専用の印。
+- **一覧**: サマリーに年間コスト・体験中件数 /「今後30日の請求」（合計＋近い5件）/ 並び替えチップ
+  （`app_settings.subscriptionSort` に保存）/ 各行に次回請求日（あとN日）/ 年額は年額も併記 /
+  年額の「毎月N日」誤表示を修正 / 解約済みは同名を1枚に集約（計N契約）し「解約で月¥N節約中」（success）。
+- **詳細シート**（`features/subscription-detail`）: 次回請求・年間コスト・契約期間・累計・今後3回・メモ
+  → 編集 / 改定ログ / 解約。旧 ActionSheet を置き換え。
+- **追加/編集フォーム**: 無料体験トグル＋終了日、メモ、課金日を開始日から自動入力（手で変えたら追従停止）、
+  年額は請求月を登録時に確定し編集で変更可。
+- **更新リマインド通知**（`shared/notifications/renewal-{plan,reminders}.ts` + 設定カード）:
+  請求日の前日/3日前/7日前 9:00。対象は「年額と無料体験の終了（既定）」か「すべて」。本文に金額は載せない。
+  `renewal-` 接頭辞の通知を全消し→再登録する冪等同期を、起動時とサブスク変更時（`_layout` の
+  RenewalReminderRefresher、請求に効く項目の署名で判定）に実行。iOS の保留上限64件に対し最大48件。
+- **ダッシュボード**: サブスクタイルに「次 12/5（あと13日）Netflix」。
+- **検証基盤**: mobile 単体化で失われていた lint を復活（`eslint` + `eslint-config-expo@56` を mobile に、
+  `eslint.config.js`）。PostToolUse 型チェック hook は mobile 配下なら mobile の tsc を使う。
+- 検証: `pnpm exec tsc --noEmit` / `pnpm lint` / `pnpm test`（63件）/ `npx expo export --platform ios` 緑。
+
+### 12.8 OTA アップデート（EAS Update, 2026-11-23, v1.1.0 バイナリに同梱）
+
+審査を待たずに JS の不具合修正を配れるようにする。**OTA は v1.1.0 以降のバイナリにしか届かない**
+（expo-updates はネイティブ）ため、v1.1.0 提出前に入れる。
+
+- 構成: `expo-updates` / `app.json` の `updates.url`（projectId）・`checkAutomatically: ON_LOAD`・
+  `fallbackToCacheTimeout: 0`（起動を待たせない＝取得した更新は**次回起動で適用**）/ `eas.json` production に
+  `channel: "production"`。
+- **runtimeVersion = `appVersion` ポリシー**（`version` がそのまま runtime）。fingerprint は不採用:
+  ローカルに生成済み `ios/` が残る環境では EAS 側（prebuild）と指紋がずれる恐れがあるため、明示的で決定的な方を選ぶ。
+  **規約: ネイティブ依存（`expo install` の追加・SDK 更新・config plugin・app.json のネイティブ項目）を変えたら
+  必ず `version` を上げてストア提出**。同じ version のまま OTA でネイティブ変更を配ると起動時クラッシュする
+  （expo-updates の自動ロールバックはあるが頼らない）。JS/TS・アセットだけの修正が OTA の対象。
+- 配信: `cd mobile && EAS_NO_VCS=1 npx eas-cli update --channel production --message "<内容>" --non-interactive`。
+  ロールバックは `eas update:rollback` / 再公開は `eas update:republish`。
+- UI: 設定「アプリのアップデート」カード（`features/app-updates`）＝バージョン・ストア版/OTA 版の表示、
+  手動確認、取得済みなら「再起動して適用」。
+- 審査ガイドライン: OTA は不具合修正・軽微な改善のみ（2.5.2 / 3.3.1(B)）。機能追加は従来どおり審査に出す。
+- 同時に依存を SDK 56 推奨版へ整列（`expo install --fix`、expo-constants の重複解消、`@expo/metro-runtime`/
+  `@expo/dom-webview` を直接依存化）。expo-doctor の残 1 件は Hermes V1 のメモリ回帰＝**SDK 57 で解消**（別タスク）。
+- App Privacy: **申告しない（「データを収集しない」を維持）**と決定（2026-11-23）。

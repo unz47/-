@@ -59,6 +59,9 @@ export const subscriptions = sqliteTable(
     canceledAt: text("canceled_at"), // 論理削除
     presetId: text("preset_id"),
     createdAt: text("created_at").notNull(),
+    memo: text("memo"),
+    // 無料体験の終了日（＝初回請求日, YYYY-MM-DD）。体験付き登録では startedAt と同じ日を入れる。
+    trialEndsAt: text("trial_ends_at"),
   },
   (t) => ({
     serviceIdx: index("subscriptions_service_idx").on(t.serviceName),

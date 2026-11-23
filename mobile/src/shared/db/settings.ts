@@ -4,6 +4,9 @@
 import { eq } from "drizzle-orm";
 import { useLiveQuery } from "drizzle-orm/expo-sqlite";
 
+import type { SubscriptionSort } from "@/shared/lib/billing";
+import type { ReminderScope } from "@/shared/notifications/renewal-plan";
+
 import { db } from "./client";
 import { appSettings } from "./schema";
 
@@ -16,6 +19,10 @@ const KEYS = {
   weeklyInsightWeekday: "weeklyInsightWeekday",
   weeklyInsightHour: "weeklyInsightHour",
   weeklyInsightMinute: "weeklyInsightMinute",
+  renewalReminder: "renewalReminder",
+  renewalDaysBefore: "renewalDaysBefore",
+  renewalScope: "renewalScope",
+  subscriptionSort: "subscriptionSort",
 } as const;
 
 async function getValue(key: string): Promise<string | null> {
@@ -121,4 +128,55 @@ export async function setWeeklyInsightSchedule(
     setValue(KEYS.weeklyInsightHour, String(s.hour)),
     setValue(KEYS.weeklyInsightMinute, String(s.minute)),
   ]);
+}
+
+// --- サブスク更新リマインド（請求日の N 日前にローカル通知） ---
+
+export interface RenewalReminderSettings {
+  enabled: boolean;
+  daysBefore: number; // 0-30
+  scope: ReminderScope;
+}
+
+export const DEFAULT_RENEWAL_REMINDER: RenewalReminderSettings = {
+  enabled: false,
+  daysBefore: 3,
+  // 月額を毎月通知すると煩いので、既定は「年額の更新と無料体験の終了」だけ。
+  scope: "yearlyAndTrial",
+};
+
+export async function getRenewalReminderSettings(): Promise<RenewalReminderSettings> {
+  const [e, d, sc] = await Promise.all([
+    getValue(KEYS.renewalReminder),
+    getValue(KEYS.renewalDaysBefore),
+    getValue(KEYS.renewalScope),
+  ]);
+  return {
+    enabled: e === "1",
+    daysBefore: parseIntIn(d, 0, 30) ?? DEFAULT_RENEWAL_REMINDER.daysBefore,
+    scope: sc === "all" || sc === "yearlyAndTrial" ? sc : DEFAULT_RENEWAL_REMINDER.scope,
+  };
+}
+
+export async function setRenewalReminderSettings(
+  s: RenewalReminderSettings,
+): Promise<void> {
+  await Promise.all([
+    setValue(KEYS.renewalReminder, s.enabled ? "1" : "0"),
+    setValue(KEYS.renewalDaysBefore, String(s.daysBefore)),
+    setValue(KEYS.renewalScope, s.scope),
+  ]);
+}
+
+// --- サブスク一覧の並び順（next=次回請求 / amount=金額 / name=名前） ---
+
+export function useSubscriptionSort(): SubscriptionSort {
+  const v = useSettingValue(KEYS.subscriptionSort);
+  return v === "amount" || v === "name" ? v : "next";
+}
+
+export async function setSubscriptionSort(
+  v: SubscriptionSort,
+): Promise<void> {
+  await setValue(KEYS.subscriptionSort, v);
 }

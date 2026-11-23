@@ -43,6 +43,10 @@ export interface Subscription {
   canceledAt?: string; // 解約日。あれば以降は計上しない（論理削除）
   presetId?: string; // プリセット由来なら参照
   createdAt: string;
+  memo?: string; // 自由メモ（支払い方法・解約手順・共有相手など）
+  // 無料体験の終了日（＝初回請求日, YYYY-MM-DD）。体験付きで登録した契約は startedAt も同じ日にし、
+  // 月次集計（§4）は startedAt だけを見る＝体験期間は計上されない。表示とリマインド専用の印。
+  trialEndsAt?: string;
 }
 
 // サブスク変更ログ（価格改定検知）

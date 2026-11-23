@@ -2,11 +2,19 @@
   "expo": {
     "name": "エンログ",
     "slug": "enlog",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ccb30d21-0725-4e37-8153-abfb2efcc2c6",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "bundleIdentifier": "com.unz47.expensetracker",
       "infoPlist": {
@@ -54,7 +62,11 @@
           "photosPermission": "レシート画像を読み取る場合に使います。画像は端末内で処理され、外部に送信されません。",
           "microphonePermission": "動画撮影時にマイクを使用します。本アプリが音声を外部に送信することはありません。"
         }
-      ]
+      ],
+      "expo-image",
+      "expo-sharing",
+      "expo-sqlite",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

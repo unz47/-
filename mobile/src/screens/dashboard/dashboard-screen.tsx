@@ -15,7 +15,8 @@ import {
   recentMonthTotals,
   toMonthKey,
 } from "@/shared/lib/aggregate";
-import { formatMonthLabel } from "@/shared/lib/date";
+import { formatDaysLeft, upcomingCharges } from "@/shared/lib/billing";
+import { formatMonthLabel, formatShortDate } from "@/shared/lib/date";
 import { formatYen } from "@/shared/lib/money";
 import { AnimatedYen } from "@/shared/ui/animated-yen";
 import { Card } from "@/shared/ui/card";
@@ -41,6 +42,12 @@ export function DashboardScreen() {
   const trend = recentMonthTotals(expenses, subs, now, 6);
 
   const delta = summary.total - prevSummary.total;
+  // 次の請求（解約済みを除く今後30日で最も近いもの）。
+  const nextCharge = upcomingCharges(
+    subs.filter((s) => !s.canceledAt),
+    now,
+    30,
+  )[0];
 
   return (
     <SafeAreaView className="flex-1 bg-base" edges={["top"]}>
@@ -84,6 +91,13 @@ export function DashboardScreen() {
             <Text className="text-xs text-text-muted">
               月額換算 {formatYen(summary.subscriptionMonthly)}
             </Text>
+            {nextCharge && (
+              <Text className="text-xs text-text-secondary" numberOfLines={1}>
+                次 {formatShortDate(nextCharge.date)}（
+                {formatDaysLeft(nextCharge.daysLeft)}）{" "}
+                {nextCharge.subscription.serviceName}
+              </Text>
+            )}
           </Card>
           <BudgetTile spent={summary.total} now={now} className="flex-1" />
         </View>

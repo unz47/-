@@ -5,12 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, type ColorValue, Text, View } from "react-native";
 
 import { useExpenses } from "@/entities/expense/model/use-expenses";
+import { useSubscriptions } from "@/entities/subscription/model/use-subscriptions";
+import { UpdateOnForeground } from "@/features/app-updates/update-on-foreground";
 import { useDatabaseReady } from "@/shared/db/use-database";
 import { getThemePreference } from "@/shared/db/settings";
 import {
   configureNotificationHandler,
   refreshWeeklyInsight,
 } from "@/shared/notifications/weekly-insight";
+import { refreshRenewalReminders } from "@/shared/notifications/renewal-reminders";
 import { useThemeColors } from "@/shared/config/theme";
 import { Button } from "@/shared/ui/button";
 import { ErrorBoundary } from "@/shared/ui/error-boundary";
@@ -26,6 +29,37 @@ function WeeklyInsightRefresher() {
     done.current = true;
     refreshWeeklyInsight(expenses);
   }, [expenses]);
+  return null;
+}
+
+// サブスクの更新リマインドを、起動時とサブスク内容が変わったときに登録し直す。
+// ライブクエリは毎回新しい配列を返すので、請求に効く項目だけの署名で変化を判定する。
+function RenewalReminderRefresher() {
+  const subs = useSubscriptions();
+  const signature = subs
+    .map((s) =>
+      [
+        s.id,
+        s.serviceName,
+        s.billingCycle,
+        s.billingDay,
+        s.billingMonth ?? "",
+        s.startedAt,
+        s.canceledAt ?? "",
+        s.trialEndsAt ?? "",
+      ].join("|"),
+    )
+    .sort()
+    .join("\n");
+  const latest = useRef(subs);
+  useEffect(() => {
+    latest.current = subs;
+  });
+  useEffect(() => {
+    // 連続した変更（インポート直後など）をまとめるため少し待ってから同期する。
+    const t = setTimeout(() => refreshRenewalReminders(latest.current), 800);
+    return () => clearTimeout(t);
+  }, [signature]);
   return null;
 }
 
@@ -79,6 +113,8 @@ function DatabaseGate({ onRetry }: { onRetry: () => void }) {
   return (
     <>
       <WeeklyInsightRefresher />
+      <RenewalReminderRefresher />
+      <UpdateOnForeground />
       <Tabs
         screenOptions={{
           headerShown: false,

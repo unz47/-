@@ -23,6 +23,8 @@ export function toSubscription(r: Row): Subscription {
     canceledAt: r.canceledAt ?? undefined,
     presetId: r.presetId ?? undefined,
     createdAt: r.createdAt,
+    memo: r.memo ?? undefined,
+    trialEndsAt: r.trialEndsAt ?? undefined,
   };
 }
 
@@ -38,6 +40,8 @@ export interface NewSubscriptionInput {
   billingMonth?: number;
   startedAt: string; // YYYY-MM-DD
   presetId?: string;
+  memo?: string;
+  trialEndsAt?: string; // YYYY-MM-DD
 }
 
 export async function addSubscription(
@@ -56,6 +60,8 @@ export async function addSubscription(
     canceledAt: null,
     presetId: input.presetId ?? null,
     createdAt: new Date().toISOString(),
+    memo: input.memo?.trim() || null,
+    trialEndsAt: input.trialEndsAt ?? null,
   });
 }
 
@@ -64,6 +70,8 @@ export interface UpdateSubscriptionInput {
   planName: string;
   amount: number;
   billingDay: number;
+  billingMonth?: number; // yearly の請求月（1-12）
+  memo?: string;
 }
 
 /**
@@ -79,6 +87,8 @@ export async function updateSubscription(
       planName: input.planName,
       amount: Math.round(input.amount),
       billingDay: input.billingDay,
+      billingMonth: input.billingMonth ?? null,
+      memo: input.memo?.trim() || null,
     })
     .where(eq(subscriptions.id, input.id));
 }
@@ -109,5 +119,6 @@ export async function reactivateSubscription(s: Subscription): Promise<void> {
     billingMonth: s.billingMonth,
     startedAt: new Date().toISOString().slice(0, 10),
     presetId: s.presetId,
+    memo: s.memo,
   });
 }
