@@ -23,6 +23,8 @@ const KEYS = {
   renewalDaysBefore: "renewalDaysBefore",
   renewalScope: "renewalScope",
   subscriptionSort: "subscriptionSort",
+  reviewLastPromptAt: "reviewLastPromptAt",
+  reviewLastPromptVersion: "reviewLastPromptVersion",
 } as const;
 
 async function getValue(key: string): Promise<string | null> {
@@ -179,4 +181,24 @@ export async function setSubscriptionSort(
   v: SubscriptionSort,
 ): Promise<void> {
   await setValue(KEYS.subscriptionSort, v);
+}
+
+// --- ストアレビュー依頼の履歴（review-prompt.ts の判定に使う） ---
+
+export interface ReviewPromptHistory {
+  lastPromptAt: string | null;
+  lastPromptVersion: string | null;
+}
+
+export async function getReviewPromptHistory(): Promise<ReviewPromptHistory> {
+  const [lastPromptAt, lastPromptVersion] = await Promise.all([
+    getValue(KEYS.reviewLastPromptAt),
+    getValue(KEYS.reviewLastPromptVersion),
+  ]);
+  return { lastPromptAt, lastPromptVersion };
+}
+
+export async function recordReviewPrompt(at: Date, version: string): Promise<void> {
+  await setValue(KEYS.reviewLastPromptAt, at.toISOString());
+  await setValue(KEYS.reviewLastPromptVersion, version);
 }

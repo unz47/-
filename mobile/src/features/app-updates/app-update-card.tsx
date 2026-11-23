@@ -1,10 +1,14 @@
 import Constants from "expo-constants";
 import * as Updates from "expo-updates";
 import { useState } from "react";
-import { Alert, Text } from "react-native";
+import { Alert, Linking, Text } from "react-native";
 
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
+
+// ASC App ID 6790129026（CLAUDE.md）。レビュー作成画面を直接開く。
+const WRITE_REVIEW_URL =
+  "https://apps.apple.com/app/id6790129026?action=write-review";
 
 /** "2026/11/23 14:05" */
 function formatStamp(d: Date): string {
@@ -54,7 +58,7 @@ export function AppUpdateCard() {
   return (
     <Card className="gap-2">
       <Text className="text-sm font-semibold text-text-secondary">
-        アプリのアップデート
+        アプリについて
       </Text>
       <Text className="text-xs text-text-muted">
         バージョン {version}（{running}）。不具合修正などは起動時に自動で取得し、
@@ -87,6 +91,13 @@ export function AppUpdateCard() {
       {message ? (
         <Text className="text-xs text-text-secondary">{message}</Text>
       ) : null}
+      <Button
+        label="App Store でレビューを書く"
+        variant="ghost"
+        onPress={() => {
+          Linking.openURL(WRITE_REVIEW_URL).catch(() => {});
+        }}
+      />
     </Card>
   );
 }

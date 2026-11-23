@@ -695,3 +695,19 @@ v0.1 Web版の全機能を RN へ移植完了（#1〜#13）。ダッシュボー
 - 同時に依存を SDK 56 推奨版へ整列（`expo install --fix`、expo-constants の重複解消、`@expo/metro-runtime`/
   `@expo/dom-webview` を直接依存化）。expo-doctor の残 1 件は Hermes V1 のメモリ回帰＝**SDK 57 で解消**（別タスク）。
 - App Privacy: **申告しない（「データを収集しない」を維持）**と決定（2026-11-23）。
+
+### 12.9 v1.2.0: Expo SDK 57 更新＋ストアレビュー依頼（2026-11-23, ブランチ `v1.2.0`）
+
+- **SDK 56 → 57**（RN 0.85 → 0.86.3, Reanimated 4.5 / Worklets 0.10）。目的は Hermes V1 のメモリ回帰の解消
+  （expo@57.0.9 以降で修正）。RN 0.86 は破壊的変更なし。SDK 58（RN 0.88・expo-router 中核刷新・
+  `File.write()` 非同期化・iOS 27 SDK＝Xcode 27 必須）は**見送り**、iOS 27 SDK 必須化（例年4月）前に別途対応。
+  `@react-native/metro-config@0.86.3` を devDependency に固定（worklets の peer `*` が旧 0.85.3 に残るため）。
+  expo-doctor は「SDK 57 は Xcode 26.4 以上」と警告するが、**手元の Xcode 26.2 でも Release ビルド・起動を確認済み**（EAS は自前イメージ）。
+  ネイティブ変更なので `version` 1.2.0（runtimeVersion=appVersion の規約どおり OTA では配らない）。
+- **ストアレビュー依頼**（`expo-store-review`）: 判定は純ロジック `shared/lib/review-prompt.ts`（vitest）。
+  条件 = 最初の記録から7日以上・支出＋サブスク10件以上・同一バージョンで1回まで・前回から120日以上。
+  支出/サブスクの**新規保存直後**（シートが閉じた 1.2 秒後）に `features/store-review` から判定し、
+  OS のダイアログが出せる時だけ `requestReview()`（`hasAction()` はストア遷移を含むので使わない）。
+  履歴は `app_settings`（`reviewLastPromptAt`/`reviewLastPromptVersion`）。設定「アプリについて」に
+  「App Store でレビューを書く」（`?action=write-review`）。
+

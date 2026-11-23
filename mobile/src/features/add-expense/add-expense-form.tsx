@@ -10,6 +10,7 @@ import {
 } from "@/entities/expense/model/expense-repo";
 import type { Expense } from "@/shared/db/types";
 import { merchantKey, type ReceiptPrefill } from "@/shared/ocr";
+import { maybeRequestReviewAfterSave } from "@/features/store-review/maybe-request-review";
 import { hapticSuccess } from "@/shared/lib/haptics";
 import { AmountInput } from "@/shared/ui/amount-input";
 import { Button } from "@/shared/ui/button";
@@ -82,6 +83,7 @@ export function AddExpenseForm({
         merchantKey: merchantKey(merchantName),
         occurredAt: prefill?.occurredAt,
       });
+      maybeRequestReviewAfterSave();
     }
     hapticSuccess();
     onClose();

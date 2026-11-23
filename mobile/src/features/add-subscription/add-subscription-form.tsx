@@ -14,6 +14,7 @@ import { useThemeColors } from "@/shared/config/theme";
 import { SUBSCRIPTION_CATEGORY_ID } from "@/shared/db/seed";
 import type { BillingCycle } from "@/shared/db/types";
 import { cn } from "@/shared/lib/cn";
+import { maybeRequestReviewAfterSave } from "@/features/store-review/maybe-request-review";
 import { hapticSuccess } from "@/shared/lib/haptics";
 import { AmountInput } from "@/shared/ui/amount-input";
 import { Button } from "@/shared/ui/button";
@@ -130,6 +131,7 @@ export function AddSubscriptionForm({ visible, onClose }: Props) {
     hapticSuccess();
     reset();
     onClose();
+    maybeRequestReviewAfterSave();
   }
 
   return (

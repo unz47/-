@@ -2,7 +2,7 @@
   "expo": {
     "name": "エンログ",
     "slug": "enlog",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
@@ -66,7 +66,9 @@
       "expo-image",
       "expo-sharing",
       "expo-sqlite",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,
