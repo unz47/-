@@ -1,5 +1,6 @@
 // レシートOCR の公開API（§11）。UI からはここだけ見る。
 // 撮影(カメラ1枚) → 台形補正+OCR(Vision) → parse まで一気通貫。すべて端末内・外部送信なし。
+import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { Platform } from "react-native";
 
@@ -52,13 +53,22 @@ export async function scanReceipt(): Promise<ScanOutcome> {
     });
     const uri = shot.assets?.[0]?.uri;
     if (shot.canceled || !uri) return { status: "canceled" };
-    const result = await VisionOcr.recognizeText(uri);
-    const caps = await VisionOcr.getCapabilities().catch(() => ({
-      onDeviceLLM: false,
-    }));
-    const tier: ExtractionTier = caps?.onDeviceLLM ? "llm" : "heuristic";
-    const receipt = parseReceipt({ lines: result.lines });
-    return { status: "ok", receipt, tier };
+    try {
+      const result = await VisionOcr.recognizeText(uri);
+      const caps = await VisionOcr.getCapabilities().catch(() => ({
+        onDeviceLLM: false,
+      }));
+      const tier: ExtractionTier = caps?.onDeviceLLM ? "llm" : "heuristic";
+      const receipt = parseReceipt({ lines: result.lines });
+      return { status: "ok", receipt, tier };
+    } finally {
+      // レシート画像（店名・金額・購入品が写る）をキャッシュに残さない
+      try {
+        new File(uri).delete();
+      } catch {
+        // 削除失敗は結果に影響させない
+      }
+    }
   } catch (e) {
     return {
       status: "error",

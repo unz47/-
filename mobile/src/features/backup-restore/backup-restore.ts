@@ -5,6 +5,15 @@ import * as Sharing from "expo-sharing";
 
 import { exportData, importData } from "@/shared/db/backup";
 
+/** 全支出データを含む一時ファイルをキャッシュに残さない（削除失敗は無視）。 */
+function deleteQuietly(file: File): void {
+  try {
+    file.delete();
+  } catch {
+    // ベストエフォート
+  }
+}
+
 /** 全データを JSON ファイルに書き出し、共有シートで送る（保存先はユーザーが選ぶ）。 */
 export async function exportBackup(): Promise<void> {
   const data = await exportData();
@@ -13,12 +22,16 @@ export async function exportBackup(): Promise<void> {
   file.create({ overwrite: true });
   file.write(JSON.stringify(data, null, 2));
 
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(file.uri, {
-      mimeType: "application/json",
-      dialogTitle: "バックアップを保存",
-      UTI: "public.json",
-    });
+  try {
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "application/json",
+        dialogTitle: "バックアップを保存",
+        UTI: "public.json",
+      });
+    }
+  } finally {
+    deleteQuietly(file);
   }
 }
 
@@ -34,8 +47,8 @@ export async function importBackup(): Promise<ImportResult> {
     copyToCacheDirectory: true,
   });
   if (picked.canceled || !picked.assets?.[0]) return { status: "canceled" };
+  const file = new File(picked.assets[0].uri);
   try {
-    const file = new File(picked.assets[0].uri);
     const raw = JSON.parse(file.textSync());
     await importData(raw);
     return { status: "ok" };
@@ -44,5 +57,7 @@ export async function importBackup(): Promise<ImportResult> {
       status: "error",
       message: e instanceof Error ? e.message : String(e),
     };
+  } finally {
+    deleteQuietly(file); // copyToCacheDirectory で作られた複製を残さない
   }
 }

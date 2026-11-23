@@ -48,11 +48,20 @@ export async function exportExpensesCsv(): Promise<void> {
   // BOM 付き UTF-8（Excel の文字化け対策）
   file.write(`﻿${csv}`);
 
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(file.uri, {
-      mimeType: "text/csv",
-      dialogTitle: "支出CSVを保存",
-      UTI: "public.comma-separated-values-text",
-    });
+  try {
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "text/csv",
+        dialogTitle: "支出CSVを保存",
+        UTI: "public.comma-separated-values-text",
+      });
+    }
+  } finally {
+    // 支出全件入りの平文 CSV をキャッシュに残さない（削除失敗は無視）
+    try {
+      file.delete();
+    } catch {
+      // ベストエフォート
+    }
   }
 }
