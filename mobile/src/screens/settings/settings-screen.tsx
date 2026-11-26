@@ -1,16 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import { DatePicker, Host, Picker, Text as SwiftUIText } from "@expo/ui/swift-ui";
+import {
+  DatePicker,
+  Host,
+  Picker,
+  Text as SwiftUIText,
+} from "@expo/ui/swift-ui";
 import { pickerStyle, tag } from "@expo/ui/swift-ui/modifiers";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  Switch,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCategories } from "@/entities/category/model/use-categories";
@@ -72,8 +70,9 @@ export function SettingsScreen() {
   );
   const [addingCategory, setAddingCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [categoryActionsFor, setCategoryActionsFor] =
-    useState<Category | null>(null);
+  const [categoryActionsFor, setCategoryActionsFor] = useState<Category | null>(
+    null,
+  );
 
   useEffect(() => {
     isWeeklyInsightEnabled().then(setNotifyOn);
@@ -141,7 +140,10 @@ export function SettingsScreen() {
     try {
       await exportBackup();
     } catch (e) {
-      Alert.alert("エクスポート失敗", e instanceof Error ? e.message : String(e));
+      Alert.alert(
+        "エクスポート失敗",
+        e instanceof Error ? e.message : String(e),
+      );
     } finally {
       setBusy(false);
     }
@@ -173,8 +175,7 @@ export function SettingsScreen() {
             const r = await importBackup();
             setBusy(false);
             if (r.status === "ok") Alert.alert("完了", "復元しました。");
-            else if (r.status === "error")
-              Alert.alert("復元失敗", r.message);
+            else if (r.status === "error") Alert.alert("復元失敗", r.message);
           },
         },
       ],
@@ -189,16 +190,19 @@ export function SettingsScreen() {
       "すべての支出・サブスクを削除し、初期状態に戻します。元に戻せません。",
       [
         { text: "閉じる", style: "cancel" },
-        { text: "削除する", style: "destructive", onPress: () => clearAllData() },
+        {
+          text: "削除する",
+          style: "destructive",
+          onPress: () => clearAllData(),
+        },
       ],
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-base" edges={["top"]}>
-      <ScrollView contentContainerClassName="gap-3 px-5 pb-12 pt-4">
-        <Text className="text-xl font-bold text-text-primary">設定</Text>
-
+    // 上端はスタックのネイティブヘッダ（タイトル「設定」・戻る）が受け持つ。
+    <SafeAreaView className="flex-1 bg-base" edges={["bottom"]}>
+      <ScrollView contentContainerClassName="gap-3 px-5 pb-12 pt-2">
         <Card className="gap-2">
           <Text className="text-sm font-semibold text-text-secondary">
             テーマ
@@ -280,8 +284,8 @@ export function SettingsScreen() {
                 週次の振り返り通知
               </Text>
               <Text className="text-xs text-text-muted">
-                毎週{WEEKDAY_LABELS[schedule.weekday - 1]}曜{" "}
-                {schedule.hour}:{String(schedule.minute).padStart(2, "0")}
+                毎週{WEEKDAY_LABELS[schedule.weekday - 1]}曜 {schedule.hour}:
+                {String(schedule.minute).padStart(2, "0")}
                 に、直近1週間の使いがち時間帯を通知します（端末内のみ・本文に金額は載せません）。
               </Text>
             </View>
@@ -344,7 +348,8 @@ export function SettingsScreen() {
             バックアップ / 書き出し
           </Text>
           <Text className="text-xs text-text-muted">
-            JSON は全データの復元用、CSV は支出のみ（表計算・申告用）。どちらも端末内で生成・外部送信なし。
+            JSON は全データの復元用、CSV
+            は支出のみ（表計算・申告用）。どちらも端末内で生成・外部送信なし。
           </Text>
           <View className="flex-row gap-3">
             <Button

@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, Text, View } from "react-native";
 
 import { useMonthlyBudget } from "@/shared/db/settings";
 import { budgetStatus, type BudgetLevel } from "@/shared/lib/budget";
@@ -33,12 +34,20 @@ export function BudgetTile({ spent, now, className }: BudgetTileProps) {
 
   if (budget == null) {
     return (
-      <Card className={cn("justify-between gap-1", className)}>
-        <Text className="text-sm text-text-secondary">予算</Text>
-        <Text className="text-xs text-text-muted">
-          設定タブで月予算を決めると、残額とペースが出ます。
-        </Text>
-      </Card>
+      // 未設定時はタップで設定画面へ（設定はホーム右上の歯車から開くスタック画面）。
+      <Pressable
+        onPress={() => router.push("/settings")}
+        accessibilityRole="button"
+        accessibilityLabel="月予算を設定する"
+        className={cn("active:opacity-70", className)}
+      >
+        <Card className="flex-1 justify-between gap-1">
+          <Text className="text-sm text-text-secondary">予算</Text>
+          <Text className="text-xs text-text-muted">
+            タップして月予算を決めると、残額とペースが出ます。
+          </Text>
+        </Card>
+      </Pressable>
     );
   }
 

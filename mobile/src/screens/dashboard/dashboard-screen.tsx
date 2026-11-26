@@ -1,5 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { subMonths } from "date-fns";
-import { ScrollView, Text, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCategoryMap } from "@/entities/category/model/use-categories";
@@ -22,6 +24,7 @@ import { AnimatedYen } from "@/shared/ui/animated-yen";
 import { Card } from "@/shared/ui/card";
 import { DonutChart } from "@/shared/ui/charts/donut-chart";
 import { MonthTrendBars } from "@/shared/ui/charts/month-trend-bars";
+import { useThemeColors } from "@/shared/config/theme";
 
 /**
  * ダッシュボード（PROJECT_PLAN §6）。当月実請求基準（§4）。
@@ -49,16 +52,33 @@ export function DashboardScreen() {
     30,
   )[0];
 
+  const colors = useThemeColors();
+
   return (
     <SafeAreaView className="flex-1 bg-base" edges={["top"]}>
       <ScrollView contentContainerClassName="gap-3 px-5 pb-12 pt-4">
-        <View>
-          <Text className="text-sm text-text-secondary">
-            {formatMonthLabel(ym)}
-          </Text>
-          <Text className="text-base font-semibold text-text-primary">
-            支出管理
-          </Text>
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-sm text-text-secondary">
+              {formatMonthLabel(ym)}
+            </Text>
+            <Text className="text-base font-semibold text-text-primary">
+              支出管理
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push("/settings")}
+            accessibilityRole="button"
+            accessibilityLabel="設定"
+            hitSlop={10}
+            className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface active:opacity-70"
+          >
+            <Ionicons
+              name="settings-outline"
+              size={22}
+              color={colors.textSecondary}
+            />
+          </Pressable>
         </View>
 
         {/* 主役タイル: 当月総支出（カウントアップ＋前月比） */}

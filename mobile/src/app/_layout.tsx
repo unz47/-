@@ -1,8 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Stack } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, type ColorValue, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 
 import { useExpenses } from "@/entities/expense/model/use-expenses";
 import { useSubscriptions } from "@/entities/subscription/model/use-subscriptions";
@@ -77,13 +76,7 @@ function useRestoreTheme(ready: boolean): void {
   }, [ready, restored, setColorScheme]);
 }
 
-type IoniconName = keyof typeof Ionicons.glyphMap;
-const icon = (name: IoniconName) =>
-  function TabIcon({ color, size }: { color: ColorValue; size: number }) {
-    return <Ionicons name={name} color={color} size={size} />;
-  };
-
-/** DB 準備ゲート＋タブ。key を変えて再マウントするとマイグレーション/シードをやり直す。 */
+/** DB 準備ゲート＋画面スタック（タブ群の上に設定を積む）。key を変えて再マウントするとマイグレーション/シードをやり直す。 */
 function DatabaseGate({ onRetry }: { onRetry: () => void }) {
   const colors = useThemeColors();
   // DB（マイグレーション→シード）の準備が済むまで描画を待つ。
@@ -115,38 +108,26 @@ function DatabaseGate({ onRetry }: { onRetry: () => void }) {
       <WeeklyInsightRefresher />
       <RenewalReminderRefresher />
       <UpdateOnForeground />
-      <Tabs
+      <Stack
         screenOptions={{
           headerShown: false,
-          tabBarStyle: {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-          },
-          tabBarActiveTintColor: colors.accent,
-          tabBarInactiveTintColor: colors.textSecondary,
+          contentStyle: { backgroundColor: colors.base },
         }}
       >
-        <Tabs.Screen
-          name="index"
-          options={{ title: "ホーム", tabBarIcon: icon("home-outline") }}
-        />
-        <Tabs.Screen
-          name="expenses"
-          options={{ title: "支出", tabBarIcon: icon("receipt-outline") }}
-        />
-        <Tabs.Screen
-          name="subscriptions"
-          options={{ title: "サブスク", tabBarIcon: icon("repeat-outline") }}
-        />
-        <Tabs.Screen
-          name="calendar"
-          options={{ title: "カレンダー", tabBarIcon: icon("calendar-outline") }}
-        />
-        <Tabs.Screen
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
           name="settings"
-          options={{ title: "設定", tabBarIcon: icon("settings-outline") }}
+          options={{
+            headerShown: true,
+            title: "設定",
+            headerBackTitle: "ホーム",
+            headerStyle: { backgroundColor: colors.base },
+            headerTintColor: colors.accent,
+            headerTitleStyle: { color: colors.textPrimary },
+            headerShadowVisible: false,
+          }}
         />
-      </Tabs>
+      </Stack>
     </>
   );
 }
@@ -161,10 +142,7 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <DatabaseGate
-        key={attempt}
-        onRetry={() => setAttempt((n) => n + 1)}
-      />
+      <DatabaseGate key={attempt} onRetry={() => setAttempt((n) => n + 1)} />
     </ErrorBoundary>
   );
 }
