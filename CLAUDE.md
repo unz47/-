@@ -100,7 +100,8 @@ pnpm build            # 本番ビルド（最終確認）
   **検証ゲート（mobile）= `pnpm exec tsc --noEmit && pnpm lint && pnpm test` + `npx expo export --platform ios`**
   （lint は mobile 単体の `eslint.config.js`。`pnpm install --ignore-workspace` 後に動く）。
 - **★v1.2.0（ブランチ `v1.2.0`, 2026-11-23, PROJECT_PLAN §12.9, 未提出）**: Expo SDK 57（Hermes メモリ回帰の解消）＋
-  ストアレビュー依頼（expo-store-review、保存直後・7日/10件/版ごと1回/120日間隔）。expo-doctor は Xcode 26.4+ を要求するが
+  ストアレビュー依頼（expo-store-review、保存直後・7日/10件/版ごと1回/120日間隔）＋
+  **サブスクの見直し（取捨選択）**（スワイプで必要/迷う/解約候補、`sub_reviews`=migration 0005、§12.10）。expo-doctor は Xcode 26.4+ を要求するが
   手元 26.2 でも Release ビルド・起動確認済み。v1.1.0 が公開されてから main 系へ取り込み・提出する。
 - **★OTA アップデート（EAS Update, 2026-11-23, PROJECT_PLAN §12.8）**: v1.1.0 バイナリに同梱。
   配信 `cd mobile && EAS_NO_VCS=1 npx eas-cli update --channel production --message "..." --non-interactive`。

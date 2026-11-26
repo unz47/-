@@ -58,3 +58,17 @@ export interface SubscriptionChangeLog {
   newValue: string | number;
   changedAt: string; // ISO
 }
+
+// サブスク見直し（取捨選択）。keep=必要 / maybe=迷う / cancel=解約候補。
+export type ReviewVerdict = "keep" | "maybe" | "cancel";
+// 自己申告の利用頻度。daily=ほぼ毎日 / weekly=週に数回 / monthly=月に数回 / rarely=ほとんど使っていない
+export type UsageFrequency = "daily" | "weekly" | "monthly" | "rarely";
+
+export interface SubscriptionReview {
+  id: string;
+  subscriptionId: string;
+  verdict: ReviewVerdict;
+  usage?: UsageFrequency;
+  reviewedAt: string; // ISO
+}
+

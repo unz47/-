@@ -1,8 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 
+import { addSubscriptionReview } from "@/entities/sub-review/model/sub-review-repo";
+import { VERDICT_TONE } from "@/entities/sub-review/ui/verdict-badge";
+
 import { useThemeColors } from "@/shared/config/theme";
-import type { Subscription } from "@/shared/db/types";
+import type {
+  ReviewVerdict,
+  Subscription,
+  SubscriptionReview,
+  UsageFrequency,
+} from "@/shared/db/types";
 import { monthlyEquivalent } from "@/shared/lib/aggregate";
 import {
   daysUntil,
@@ -14,7 +22,14 @@ import {
   yearlyCost,
 } from "@/shared/lib/billing";
 import { formatFullDay } from "@/shared/lib/date";
+import { cn } from "@/shared/lib/cn";
+import { hapticLight } from "@/shared/lib/haptics";
 import { formatYen } from "@/shared/lib/money";
+import {
+  USAGE_OPTIONS,
+  usageInsight,
+  VERDICT_LABEL,
+} from "@/shared/lib/sub-review";
 import { Button } from "@/shared/ui/button";
 import { ServiceLogo } from "@/shared/ui/service-logo";
 import { Sheet } from "@/shared/ui/sheet";
@@ -24,6 +39,8 @@ interface Props {
   onClose: () => void;
   subscription: Subscription;
   raised: boolean;
+  /** 最新の見直し判定（未見直しは undefined） */
+  review?: SubscriptionReview;
   onEdit: () => void;
   onShowLogs: () => void;
   onCancel: () => void;
@@ -49,6 +66,7 @@ export function SubscriptionDetailSheet({
   onClose,
   subscription: s,
   raised,
+  review,
   onEdit,
   onShowLogs,
   onCancel,
@@ -74,7 +92,11 @@ export function SubscriptionDetailSheet({
       accessibilityLabel={`${s.serviceName} の詳細`}
     >
       <View className="flex-row items-center gap-3">
-        <ServiceLogo presetId={s.presetId} serviceName={s.serviceName} size={32} />
+        <ServiceLogo
+          presetId={s.presetId}
+          serviceName={s.serviceName}
+          size={32}
+        />
         <View className="flex-1">
           <View className="flex-row flex-wrap items-center gap-2">
             <Text className="text-lg font-bold text-text-primary">
@@ -165,6 +187,8 @@ export function SubscriptionDetailSheet({
         </View>
       )}
 
+      <ReviewSection subscription={s} review={review} />
+
       {s.memo ? (
         <View className="gap-1">
           <Text className="text-xs text-text-secondary">メモ</Text>
@@ -220,7 +244,116 @@ function Stat({
       >
         {value}
       </Text>
-      {note ? <Text className="text-[11px] text-text-secondary">{note}</Text> : null}
+      {note ? (
+        <Text className="text-[11px] text-text-secondary">{note}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+const VERDICTS: ReviewVerdict[] = ["keep", "maybe", "cancel"];
+
+/** 見直し（必要 / 迷う / 解約候補 と利用頻度）。タップで即記録＝履歴に1行追加。 */
+function ReviewSection({
+  subscription: s,
+  review,
+}: {
+  subscription: Subscription;
+  review?: SubscriptionReview;
+}) {
+  const insight = review?.usage ? usageInsight(s, review.usage) : null;
+
+  function save(verdict: ReviewVerdict, usage?: UsageFrequency) {
+    hapticLight();
+    addSubscriptionReview({ subscriptionId: s.id, verdict, usage }).catch(
+      () => {},
+    );
+  }
+
+  return (
+    <View className="gap-2">
+      <View className="flex-row items-baseline justify-between">
+        <Text className="text-xs text-text-secondary">本当に必要？</Text>
+        {review && (
+          <Text className="text-[11px] text-text-muted">
+            {review.reviewedAt.slice(0, 10).replaceAll("-", "/")} に判定
+          </Text>
+        )}
+      </View>
+      <View className="flex-row gap-2">
+        {VERDICTS.map((v) => {
+          const on = review?.verdict === v;
+          const t = VERDICT_TONE[v];
+          return (
+            <Pressable
+              key={v}
+              onPress={() => save(v, review?.usage)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={VERDICT_LABEL[v]}
+              className={cn(
+                "flex-1 items-center rounded-xl border py-2.5 active:opacity-70",
+                on ? cn(t.border, t.bg) : "border-border bg-surface-raised",
+              )}
+            >
+              <Text
+                className={cn(
+                  "text-sm font-semibold",
+                  on ? t.fg : "text-text-secondary",
+                )}
+              >
+                {VERDICT_LABEL[v]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View className="flex-row flex-wrap gap-2">
+        {USAGE_OPTIONS.map((o) => {
+          const on = review?.usage === o.key;
+          return (
+            <Pressable
+              key={o.key}
+              // 利用頻度だけ先に答えた場合は「迷う」で記録（判定は後から変えられる）
+              onPress={() => save(review?.verdict ?? "maybe", o.key)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={`利用頻度 ${o.label}`}
+              className={cn(
+                "rounded-full border px-3 py-1.5",
+                on
+                  ? "border-accent bg-accent/15"
+                  : "border-border bg-surface-raised",
+              )}
+            >
+              <Text
+                className={cn(
+                  "text-xs",
+                  on ? "text-accent" : "text-text-secondary",
+                )}
+              >
+                {o.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {insight && (
+        <Text
+          className={cn(
+            "text-xs font-semibold",
+            insight.level === "poor"
+              ? "text-warning"
+              : insight.level === "good"
+                ? "text-accent"
+                : "text-text-secondary",
+          )}
+          style={{ fontVariant: ["tabular-nums"] }}
+        >
+          {insight.text}
+          {insight.level === "poor" ? " ・ 割高かも" : ""}
+        </Text>
+      )}
     </View>
   );
 }

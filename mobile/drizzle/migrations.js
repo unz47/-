@@ -6,6 +6,7 @@ import m0001 from './0001_whole_terrax.sql';
 import m0002 from './0002_amused_ironclad.sql';
 import m0003 from './0003_tearful_wendell_rand.sql';
 import m0004 from './0004_grey_maximus.sql';
+import m0005 from './0005_mysterious_lester.sql';
 
   export default {
     journal,
@@ -14,7 +15,8 @@ import m0004 from './0004_grey_maximus.sql';
 m0001,
 m0002,
 m0003,
-m0004
+m0004,
+m0005
     }
   }
   

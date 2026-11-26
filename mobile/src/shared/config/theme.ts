@@ -13,6 +13,7 @@ export const THEME = {
     textMuted: "#5C6678",
     accent: "#2DD4BF",
     onAccent: "#07120F",
+    warning: "#FBBF24",
   },
   light: {
     base: "#EDF0F4",
@@ -24,6 +25,7 @@ export const THEME = {
     textMuted: "#97A0AE",
     accent: "#0D9488",
     onAccent: "#FFFFFF",
+    warning: "#D97706",
   },
 } as const;
 

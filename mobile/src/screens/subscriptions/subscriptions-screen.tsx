@@ -3,6 +3,8 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useRecentlyRaisedSubIds } from "@/entities/change-log/model/use-change-logs";
+import { useLatestReviews } from "@/entities/sub-review/model/use-sub-reviews";
+import { VerdictBadge } from "@/entities/sub-review/ui/verdict-badge";
 import {
   cancelSubscription,
   reactivateSubscription,
@@ -11,6 +13,14 @@ import { useSubscriptions } from "@/entities/subscription/model/use-subscription
 import { AddSubscriptionForm } from "@/features/add-subscription/add-subscription-form";
 import { EditSubscriptionForm } from "@/features/edit-subscription/edit-subscription-form";
 import { SubscriptionDetailSheet } from "@/features/subscription-detail/subscription-detail-sheet";
+import {
+  ReviewEntryCard,
+  type ReviewFilter,
+} from "@/features/subscription-review/review-entry-card";
+import {
+  ReviewSession,
+  type ReviewItem,
+} from "@/features/subscription-review/review-session";
 import { ChangeLogSheet } from "@/features/subscription-logs/change-log-sheet";
 import { setSubscriptionSort, useSubscriptionSort } from "@/shared/db/settings";
 import type { Subscription } from "@/shared/db/types";
@@ -28,6 +38,7 @@ import {
 import { formatShortDate } from "@/shared/lib/date";
 import { hapticWarning } from "@/shared/lib/haptics";
 import { formatYen } from "@/shared/lib/money";
+import { VERDICT_LABEL } from "@/shared/lib/sub-review";
 import { AnimatedYen } from "@/shared/ui/animated-yen";
 import { Card } from "@/shared/ui/card";
 import { Chip } from "@/shared/ui/chip";
@@ -80,6 +91,14 @@ export function SubscriptionsScreen() {
   const [detailFor, setDetailFor] = useState<Subscription | null>(null);
   const [editing, setEditing] = useState<Subscription | null>(null);
   const [logsFor, setLogsFor] = useState<Subscription | null>(null);
+  const latest = useLatestReviews();
+  const [filter, setFilter] = useState<ReviewFilter>("all");
+  // 見直しモード。開くたびに key を変えて状態（進捗・取り消し履歴）をリセットする。
+  const [session, setSession] = useState<{
+    key: number;
+    items: ReviewItem[];
+  } | null>(null);
+  const [sessionOpen, setSessionOpen] = useState(false);
 
   const today = new Date();
   const active = sortSubscriptions(
@@ -94,6 +113,12 @@ export function SubscriptionsScreen() {
   const monthlyTotal = active.reduce((a, s) => a + monthlyEquivalent(s), 0);
   const yearlyTotal = active.reduce((a, s) => a + yearlyCost(s), 0);
   const trialCount = active.filter((s) => isInTrial(s, today)).length;
+  const shown =
+    filter === "all"
+      ? active
+      : filter === "unreviewed"
+        ? active.filter((s) => !latest.has(s.id))
+        : active.filter((s) => latest.get(s.id)?.verdict === filter);
   const upcoming = upcomingCharges(active, today, UPCOMING_DAYS);
   const upcomingTotal = upcoming.reduce((a, c) => a + c.amount, 0);
   const savedMonthly = canceledGroups.reduce(
@@ -140,10 +165,26 @@ export function SubscriptionsScreen() {
               アクティブ {active.length} 件
             </Text>
             {trialCount > 0 && (
-              <Text className="text-xs text-info">無料体験中 {trialCount} 件</Text>
+              <Text className="text-xs text-info">
+                無料体験中 {trialCount} 件
+              </Text>
             )}
           </View>
         </Card>
+
+        {active.length > 0 && (
+          <ReviewEntryCard
+            active={active}
+            latest={latest}
+            raisedIds={raisedIds}
+            filter={filter}
+            onFilter={setFilter}
+            onStart={(items) => {
+              setSession({ key: Date.now(), items });
+              setSessionOpen(true);
+            }}
+          />
+        )}
 
         {upcoming.length > 0 && (
           <Card className="gap-2">
@@ -179,10 +220,16 @@ export function SubscriptionsScreen() {
                   serviceName={c.subscription.serviceName}
                   size={18}
                 />
-                <Text className="flex-1 text-sm text-text-primary" numberOfLines={1}>
+                <Text
+                  className="flex-1 text-sm text-text-primary"
+                  numberOfLines={1}
+                >
                   {c.subscription.serviceName}
                   {c.subscription.trialEndsAt === c.date ? "（体験終了）" : ""}
                 </Text>
+                {latest.get(c.subscription.id)?.verdict === "cancel" && (
+                  <VerdictBadge verdict="cancel" />
+                )}
                 <Text
                   className="text-sm text-text-secondary"
                   style={{ fontVariant: ["tabular-nums"] }}
@@ -197,6 +244,20 @@ export function SubscriptionsScreen() {
               </Text>
             )}
           </Card>
+        )}
+
+        {filter !== "all" && (
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm text-text-secondary">
+              {filter === "unreviewed" ? "未見直し" : VERDICT_LABEL[filter]}{" "}
+              {shown.length}件を表示中
+            </Text>
+            <Chip
+              label="絞り込みを解除"
+              active={false}
+              onPress={() => setFilter("all")}
+            />
+          </View>
         )}
 
         {active.length > 1 && (
@@ -219,9 +280,10 @@ export function SubscriptionsScreen() {
             </Text>
           </Card>
         ) : (
-          active.map((s) => {
+          shown.map((s) => {
             const next = nextBillingDate(s, today);
             const trial = isInTrial(s, today);
+            const verdict = latest.get(s.id)?.verdict;
             return (
               <Pressable
                 key={s.id}
@@ -241,13 +303,18 @@ export function SubscriptionsScreen() {
                     />
                     <View className="flex-1">
                       <View className="flex-row flex-wrap items-center gap-x-2">
-                        <Text className="text-text-primary">{s.serviceName}</Text>
+                        <Text className="text-text-primary">
+                          {s.serviceName}
+                        </Text>
                         {trial && (
                           <View className="rounded-full bg-info/15 px-2 py-0.5">
                             <Text className="text-[10px] font-semibold text-info">
                               体験中
                             </Text>
                           </View>
+                        )}
+                        {verdict && verdict !== "keep" && (
+                          <VerdictBadge verdict={verdict} />
                         )}
                         {raisedIds.has(s.id) && (
                           // 赤=値上げ専用のシグナル（§3）。直近30日の増額のみ。
@@ -258,7 +325,10 @@ export function SubscriptionsScreen() {
                           </View>
                         )}
                       </View>
-                      <Text className="text-xs text-text-muted" numberOfLines={1}>
+                      <Text
+                        className="text-xs text-text-muted"
+                        numberOfLines={1}
+                      >
                         {s.planName}
                         {next
                           ? ` ・ 次回 ${formatShortDate(next)}（${formatDaysLeft(
@@ -342,7 +412,10 @@ export function SubscriptionsScreen() {
         )}
       </ScrollView>
 
-      <Fab onPress={() => setAdding(true)} accessibilityLabel="サブスクを追加" />
+      <Fab
+        onPress={() => setAdding(true)}
+        accessibilityLabel="サブスクを追加"
+      />
 
       {detail && (
         <SubscriptionDetailSheet
@@ -351,9 +424,21 @@ export function SubscriptionsScreen() {
           onClose={() => setDetailFor(null)}
           subscription={detail}
           raised={raisedIds.has(detail.id)}
+          review={latest.get(detail.id)}
           onEdit={() => setEditing(detail)}
           onShowLogs={() => setLogsFor(detail)}
           onCancel={() => confirmCancel(detail)}
+        />
+      )}
+
+      {session && (
+        <ReviewSession
+          key={session.key}
+          visible={sessionOpen}
+          onClose={() => setSessionOpen(false)}
+          items={session.items}
+          active={active}
+          latest={latest}
         />
       )}
 

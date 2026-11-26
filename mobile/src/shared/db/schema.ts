@@ -92,3 +92,22 @@ export const subChangeLogs = sqliteTable(
     changedIdx: index("sub_change_logs_changed_idx").on(t.changedAt),
   }),
 );
+
+// サブスクの見直し判定（必要 / 迷う / 解約候補）の履歴。追記のみで、各サブスクの最新行が現在の判定。
+// 判定はユーザーの主観メモであり、集計（§4）には影響しない。解約は従来どおり canceledAt で表す。
+export const subReviews = sqliteTable(
+  "sub_reviews",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id").notNull(),
+    verdict: text("verdict", { enum: ["keep", "maybe", "cancel"] }).notNull(),
+    // 自己申告の利用頻度（未回答は null）。1回あたりのコスト算出に使う。
+    usage: text("usage", { enum: ["daily", "weekly", "monthly", "rarely"] }),
+    reviewedAt: text("reviewed_at").notNull(), // ISO
+  },
+  (t) => ({
+    subIdx: index("sub_reviews_sub_idx").on(t.subscriptionId),
+    reviewedIdx: index("sub_reviews_reviewed_idx").on(t.reviewedAt),
+  }),
+);
+

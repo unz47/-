@@ -4,6 +4,7 @@ import {
   categories,
   expenses,
   subChangeLogs,
+  subReviews,
   subscriptions,
 } from "./schema";
 import { seedDefaultCategories } from "./seed";
@@ -15,17 +16,20 @@ export interface BackupData {
   categories: (typeof categories.$inferSelect)[];
   subscriptions: (typeof subscriptions.$inferSelect)[];
   subChangeLogs: (typeof subChangeLogs.$inferSelect)[];
+  // v1.2.0〜。古いバックアップには無い（取り込み時は空として扱う）。
+  subReviews?: (typeof subReviews.$inferSelect)[];
 }
 
 const BACKUP_VERSION = 1;
 
 /** 全テーブルを 1 つの BackupData にまとめて返す。 */
 export async function exportData(): Promise<BackupData> {
-  const [exp, cat, sub, log] = await Promise.all([
+  const [exp, cat, sub, log, rev] = await Promise.all([
     db.select().from(expenses),
     db.select().from(categories),
     db.select().from(subscriptions),
     db.select().from(subChangeLogs),
+    db.select().from(subReviews),
   ]);
   return {
     version: BACKUP_VERSION,
@@ -34,6 +38,7 @@ export async function exportData(): Promise<BackupData> {
     categories: cat,
     subscriptions: sub,
     subChangeLogs: log,
+    subReviews: rev,
   };
 }
 
@@ -44,7 +49,8 @@ function isBackupData(value: unknown): value is BackupData {
     Array.isArray(v.expenses) &&
     Array.isArray(v.categories) &&
     Array.isArray(v.subscriptions) &&
-    Array.isArray(v.subChangeLogs)
+    Array.isArray(v.subChangeLogs) &&
+    (v.subReviews === undefined || Array.isArray(v.subReviews))
   );
 }
 
@@ -56,6 +62,7 @@ export async function importData(raw: unknown): Promise<void> {
   // SQLite は1接続なので逐次。FK制約は張っていないため順序自由。
   await db.delete(expenses);
   await db.delete(subChangeLogs);
+  await db.delete(subReviews);
   await db.delete(subscriptions);
   await db.delete(categories);
 
@@ -65,5 +72,7 @@ export async function importData(raw: unknown): Promise<void> {
     await db.insert(subscriptions).values(raw.subscriptions);
   if (raw.subChangeLogs.length > 0)
     await db.insert(subChangeLogs).values(raw.subChangeLogs);
+  if (raw.subReviews && raw.subReviews.length > 0)
+    await db.insert(subReviews).values(raw.subReviews);
   if (raw.expenses.length > 0) await db.insert(expenses).values(raw.expenses);
 }
